@@ -15,6 +15,7 @@ import {
   Pencil,
   UserCheck,
   UserX,
+  RefreshCw,
 } from "lucide-react";
 import {
   useGetDashboardSummary,
@@ -36,6 +37,7 @@ import {
   getListBarbersQueryKey,
   useCreateBarber,
   useUpdateBarber,
+  useCreateRecurringAppointments,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -693,10 +695,53 @@ function AppointmentsTab() {
   );
 }
 
+const ADMIN_WEEKDAYS = [
+  { value: "0", label: "Domingo" },
+  { value: "2", label: "Terça-feira" },
+  { value: "3", label: "Quarta-feira" },
+  { value: "4", label: "Quinta-feira" },
+  { value: "5", label: "Sexta-feira" },
+  { value: "6", label: "Sábado" },
+];
+
+function generate30minSlots(openHour: number, closeHour: number): string[] {
+  const slots: string[] = [];
+  let current = openHour * 60;
+  while (current + 30 <= closeHour * 60) {
+    const h = Math.floor(current / 60).toString().padStart(2, "0");
+    const m = (current % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    current += 30;
+  }
+  return slots;
+}
+
+const ADMIN_WEEKDAY_SLOTS: Record<string, string[]> = {
+  "0": generate30minSlots(7, 14),
+  "2": generate30minSlots(7, 20),
+  "3": generate30minSlots(7, 20),
+  "4": generate30minSlots(7, 20),
+  "5": generate30minSlots(7, 20),
+  "6": generate30minSlots(7, 20),
+};
+
+const ADMIN_PERIOD_OPTIONS = [
+  { value: "this_month", label: "Este mês" },
+  { value: "next_2_months", label: "Próximos 2 meses" },
+];
+
+function getMaxDate(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString().split("T")[0];
+}
+
+type AdminRecurringResult = { groupId: string; created: string[]; skipped: number; serviceName: string; time: string; clientName: string };
+
 function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
   const { data: services = [] } = useListServices();
   const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
   const createMutation = useCreateAppointment();
+  const createRecurringMutation = useCreateRecurringAppointments();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -706,42 +751,151 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
   const [barberId, setBarberId] = useState("all");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [weekday, setWeekday] = useState("4");
+  const [period, setPeriod] = useState<"this_month" | "next_2_months">("this_month");
+  const [recurringResult, setRecurringResult] = useState<AdminRecurringResult | null>(null);
 
-  const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
+  const resolvedBarberId = barberId !== "all" ? barberId : null;
+
+  const slotParams = { date, serviceId, ...(resolvedBarberId ? { barberId: resolvedBarberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(
     slotParams,
     {
       query: {
-        enabled: !!date && !!serviceId,
+        enabled: !isRecurring && !!date && !!serviceId,
         queryKey: getGetAvailableSlotsQueryKey(slotParams),
       },
     }
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !phone || !serviceId || !date || !time) return;
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val) {
+      const dayOfWeek = new Date(val).getUTCDay();
+      if (dayOfWeek === 1) {
+        toast({ title: "Aviso", description: "Segunda-feira fechado" });
+        setDate(""); return;
+      }
+    }
+    setDate(val);
+    setTime("");
+  };
 
+  const handleSingle = () => {
+    if (!name || !phone || !serviceId || !date || !time) return;
     createMutation.mutate(
-      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null } },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: resolvedBarberId } },
       {
         onSuccess: () => {
           toast({ title: "Sucesso", description: "Agendamento criado." });
           qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
           onComplete();
         },
-        onError: () => {
-          toast({ title: "Erro", description: "Horário indisponível ou conflito.", variant: "destructive" });
-        },
+        onError: () => toast({ title: "Erro", description: "Horário indisponível ou conflito.", variant: "destructive" }),
       }
     );
   };
 
+  const handleRecurring = () => {
+    if (!name || !phone || !serviceId || !time) return;
+    const service = services.find((s) => s.id === serviceId);
+    const startDate = new Date().toISOString().split("T")[0];
+    createRecurringMutation.mutate(
+      {
+        data: {
+          clientName: name,
+          clientPhone: phone,
+          serviceId,
+          time,
+          weekday: parseInt(weekday, 10),
+          period,
+          startDate,
+          barberId: resolvedBarberId,
+        },
+      },
+      {
+        onSuccess: (result) => {
+          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
+          if (result.created.length === 0) {
+            toast({ title: "Nenhum horário disponível", description: "Todas as datas do período já estão ocupadas.", variant: "destructive" });
+            return;
+          }
+          setRecurringResult({
+            groupId: result.groupId,
+            created: result.created.map((a) => a.date),
+            skipped: result.skipped.length,
+            serviceName: service?.name ?? "",
+            time,
+            clientName: name,
+          });
+        },
+        onError: () => toast({ title: "Erro", description: "Falha ao criar agendamentos recorrentes.", variant: "destructive" }),
+      }
+    );
+  };
+
+  const resetForm = () => {
+    setName(""); setPhone(""); setServiceId(""); setBarberId("all");
+    setDate(""); setTime(""); setIsRecurring(false); setWeekday("4");
+    setPeriod("this_month"); setRecurringResult(null);
+  };
+
+  const isPending = createMutation.isPending || createRecurringMutation.isPending;
+  const canSingle = !isRecurring && !!name && !!phone && !!serviceId && !!date && !!time;
+  const canRecurring = isRecurring && !!name && !!phone && !!serviceId && !!time;
+
+  if (recurringResult) {
+    return (
+      <div className="max-w-md mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-xl p-8 text-center"
+        >
+          <div className="flex justify-center mb-6">
+            <CheckCircle2 className="w-20 h-20 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Recorrência criada!</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            {recurringResult.created.length} agendamento{recurringResult.created.length !== 1 ? "s" : ""} criado{recurringResult.created.length !== 1 ? "s" : ""}
+            {recurringResult.skipped > 0 && `, ${recurringResult.skipped} ignorado${recurringResult.skipped !== 1 ? "s" : ""} por conflito`}.
+          </p>
+          <div className="glass rounded-lg p-4 mb-6 text-left space-y-1.5 max-h-48 overflow-y-auto">
+            {recurringResult.created.map((d) => (
+              <div key={d} className="flex justify-between py-1 border-b border-white/5 last:border-0">
+                <span className="text-muted-foreground text-sm">{d.split("-").reverse().join("/")}</span>
+                <span className="text-white text-sm font-medium">{recurringResult.time}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-3">
+            <Button
+              className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground h-11 font-semibold"
+              onClick={() => { onComplete(); }}
+            >
+              Ver Agendamentos
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 border-white/10 text-foreground hover:bg-white/5 h-11"
+              onClick={resetForm}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Novo
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-md mx-auto">
       <h2 className="text-2xl font-bold text-white tracking-tight mb-6">Novo Agendamento</h2>
-      
-      <form onSubmit={handleSubmit} className="glass rounded-xl p-8 space-y-5">
+
+      <div className="glass rounded-xl p-8 space-y-5">
+        {/* Cliente */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Cliente</label>
           <Input
@@ -749,11 +903,11 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="Nome completo"
             className="bg-input border-border h-12"
-            required
             data-testid="input-new-client-name"
           />
         </div>
 
+        {/* Telefone */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Telefone</label>
           <Input
@@ -761,29 +915,28 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(11) 99999-9999"
             className="bg-input border-border h-12"
-            required
             data-testid="input-new-client-phone"
           />
         </div>
 
+        {/* Serviço */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Serviço</label>
-          <Select value={serviceId} onValueChange={setServiceId} required>
+          <Select value={serviceId} onValueChange={(v) => { setServiceId(v); setTime(""); }}>
             <SelectTrigger className="bg-input border-border h-12" data-testid="select-new-service">
               <SelectValue placeholder="Selecione o serviço" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
               {services.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name} — {s.priceLabel}
-                </SelectItem>
+                <SelectItem key={s.id} value={s.id}>{s.name} — {s.priceLabel}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
+        {/* Barbeiro */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Barbeiro (opcional)</label>
+          <label className="text-sm font-medium text-foreground">Barbeiro</label>
           <Select value={barberId} onValueChange={setBarberId}>
             <SelectTrigger className="bg-input border-border h-12" data-testid="select-new-barber">
               <SelectValue placeholder="Qualquer barbeiro" />
@@ -797,66 +950,161 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
           </Select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Data</label>
-            <Input
-              type="date"
-              value={date}
-              min={new Date().toISOString().split("T")[0]}
-              max={(() => {
-                const now = new Date();
-                return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString().split("T")[0];
-              })()}
-              onChange={(e) => { setDate(e.target.value); setTime(""); }}
-              className="bg-input border-border h-12"
-              required
-              data-testid="input-new-date"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Horário</label>
-            <Select
-              value={time}
-              onValueChange={setTime}
-              disabled={!date || !serviceId || slotsLoading}
-            >
-              <SelectTrigger className="bg-input border-border h-12" data-testid="input-new-time">
-                <SelectValue
-                  placeholder={
-                    !date || !serviceId
-                      ? "Selecione data e serviço"
-                      : slotsLoading
-                        ? "Carregando..."
-                        : "Selecione um horário"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border max-h-60 overflow-y-auto">
-                {(slotsData?.slots ?? []).map((slot: string) => (
-                  <SelectItem key={slot} value={slot}>
-                    {slot}
-                  </SelectItem>
-                ))}
-                {!slotsLoading && date && serviceId && (slotsData?.slots ?? []).length === 0 && (
-                  <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                    Sem horários disponíveis
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+        {/* Recorrente toggle */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Agendamento recorrente?</label>
+          <div className="flex gap-2">
+            {[
+              { value: false, label: "Não" },
+              { value: true, label: "Sim — semanal fixo" },
+            ].map((opt) => (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => { setIsRecurring(opt.value); setDate(""); setTime(""); }}
+                className={`flex-1 h-10 rounded-lg text-sm font-medium border transition-all ${
+                  isRecurring === opt.value
+                    ? "bg-accent/15 border-accent text-accent"
+                    : "bg-input border-border text-muted-foreground hover:text-foreground hover:bg-white/5"
+                }`}
+                data-testid={`admin-toggle-recurring-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
 
+        <AnimatePresence mode="wait">
+          {!isRecurring ? (
+            <motion.div
+              key="single-fields"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-5 overflow-hidden"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Data</label>
+                  <Input
+                    type="date"
+                    value={date}
+                    min={new Date().toISOString().split("T")[0]}
+                    max={getMaxDate()}
+                    onChange={handleDateChange}
+                    className="bg-input border-border h-12"
+                    data-testid="input-new-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Horário</label>
+                  <Select value={time} onValueChange={setTime} disabled={!date || !serviceId || slotsLoading}>
+                    <SelectTrigger className="bg-input border-border h-12" data-testid="input-new-time">
+                      <SelectValue
+                        placeholder={
+                          !date || !serviceId ? "Selecione data e serviço"
+                          : slotsLoading ? "Carregando..."
+                          : "Selecione um horário"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border max-h-60 overflow-y-auto">
+                      {(slotsData?.slots ?? []).map((slot: string) => (
+                        <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                      ))}
+                      {!slotsLoading && date && serviceId && (slotsData?.slots ?? []).length === 0 && (
+                        <div className="px-3 py-4 text-sm text-muted-foreground text-center">Sem horários disponíveis</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="recurring-fields"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-5 overflow-hidden"
+            >
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <CalendarDays className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-300 leading-relaxed">
+                  Serão criados agendamentos para todos os dias da semana selecionados no período escolhido. Datas com conflito serão ignoradas automaticamente.
+                </p>
+              </div>
+
+              {/* Dia da semana */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Dia da semana</label>
+                <Select value={weekday} onValueChange={(v) => { setWeekday(v); setTime(""); }}>
+                  <SelectTrigger className="bg-input border-border h-12" data-testid="admin-select-weekday">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    {ADMIN_WEEKDAYS.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Horário fixo */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Horário fixo</label>
+                <Select value={time} onValueChange={setTime}>
+                  <SelectTrigger className="bg-input border-border h-12" data-testid="admin-select-recurring-time">
+                    <SelectValue placeholder="Selecione o horário" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border max-h-60 overflow-y-auto">
+                    {(ADMIN_WEEKDAY_SLOTS[weekday] ?? ADMIN_WEEKDAY_SLOTS["2"]).map((slot) => (
+                      <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Período */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Período</label>
+                <div className="flex gap-2">
+                  {ADMIN_PERIOD_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPeriod(opt.value as typeof period)}
+                      className={`flex-1 h-10 rounded-lg text-xs font-medium border transition-all ${
+                        period === opt.value
+                          ? "bg-accent/15 border-accent text-accent"
+                          : "bg-input border-border text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      }`}
+                      data-testid={`admin-period-${opt.value}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <Button
-          type="submit"
-          disabled={createMutation.isPending}
+          type="button"
+          onClick={isRecurring ? handleRecurring : handleSingle}
+          disabled={isPending || (!canSingle && !canRecurring)}
           className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 font-semibold mt-2"
           data-testid="button-new-submit"
         >
-          {createMutation.isPending ? "Salvando..." : "Criar Agendamento"}
+          {isPending
+            ? "Salvando..."
+            : isRecurring
+            ? "Criar Agendamentos Recorrentes"
+            : "Criar Agendamento"}
         </Button>
-      </form>
+      </div>
     </div>
   );
 }
