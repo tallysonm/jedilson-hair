@@ -96,6 +96,13 @@ export interface RevenueChartEntry {
   appointments: number;
 }
 
+export interface ServicesChartEntry {
+  serviceId: string;
+  serviceName: string;
+  count: number;
+  revenue: number;
+}
+
 export interface ErrorResponse {
   error: string;
 }

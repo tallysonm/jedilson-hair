@@ -12,4 +12,5 @@ export * from "./generated/types/listAppointmentsStatus";
 export * from "./generated/types/loginResponse";
 export * from "./generated/types/revenueChartEntry";
 export * from "./generated/types/service";
+export * from "./generated/types/servicesChartEntry";
 export * from "./generated/types/updateAppointmentBodyStatus";

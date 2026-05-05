@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { appointmentsTable } from "@workspace/db";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 const router = Router();
 
@@ -20,26 +20,23 @@ router.get("/summary", async (_req, res) => {
   const today = getTodayStr();
   const { start: monthStart, end: monthEnd } = getMonthRange();
 
-  const [todayRows, monthRows] = await Promise.all([
+  const [todayCompleted, monthCompleted, todayAll, pendingRows] = await Promise.all([
     db.select().from(appointmentsTable).where(and(eq(appointmentsTable.date, today), eq(appointmentsTable.status, "completed"))),
     db.select().from(appointmentsTable).where(and(gte(appointmentsTable.date, monthStart), lte(appointmentsTable.date, monthEnd), eq(appointmentsTable.status, "completed"))),
-  ]);
-
-  const [todayAll, pendingRows] = await Promise.all([
     db.select().from(appointmentsTable).where(eq(appointmentsTable.date, today)),
     db.select().from(appointmentsTable).where(eq(appointmentsTable.status, "pending")),
   ]);
 
-  const todayRevenue = todayRows.reduce((sum, r) => sum + Number(r.servicePrice), 0);
-  const monthRevenue = monthRows.reduce((sum, r) => sum + Number(r.servicePrice), 0);
+  const todayRevenue = todayCompleted.reduce((sum, r) => sum + Number(r.servicePrice), 0);
+  const monthRevenue = monthCompleted.reduce((sum, r) => sum + Number(r.servicePrice), 0);
 
   res.json({
     todayRevenue,
     monthRevenue,
     todayAppointments: todayAll.length,
-    monthAppointments: monthRows.length,
+    monthAppointments: monthCompleted.length,
     pendingAppointments: pendingRows.length,
-    completedToday: todayRows.length,
+    completedToday: todayCompleted.length,
   });
 });
 
@@ -61,6 +58,28 @@ router.get("/revenue-chart", async (_req, res) => {
     result.push({ date: dateStr, revenue, appointments: rows.length });
   }
 
+  res.json(result);
+});
+
+router.get("/services-chart", async (_req, res) => {
+  const rows = await db
+    .select()
+    .from(appointmentsTable)
+    .where(eq(appointmentsTable.status, "completed"));
+
+  const map = new Map<string, { serviceId: string; serviceName: string; count: number; revenue: number }>();
+
+  for (const r of rows) {
+    const existing = map.get(r.serviceId);
+    if (existing) {
+      existing.count++;
+      existing.revenue += Number(r.servicePrice);
+    } else {
+      map.set(r.serviceId, { serviceId: r.serviceId, serviceName: r.serviceName, count: 1, revenue: Number(r.servicePrice) });
+    }
+  }
+
+  const result = Array.from(map.values()).sort((a, b) => b.count - a.count);
   res.json(result);
 });
 

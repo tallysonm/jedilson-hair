@@ -170,3 +170,14 @@ export const GetRevenueChartResponseItem = zod.object({
   appointments: zod.number(),
 });
 export const GetRevenueChartResponse = zod.array(GetRevenueChartResponseItem);
+
+/**
+ * @summary Get most sold services (count of completed appointments per service)
+ */
+export const GetServicesChartResponseItem = zod.object({
+  serviceId: zod.string(),
+  serviceName: zod.string(),
+  count: zod.number(),
+  revenue: zod.number(),
+});
+export const GetServicesChartResponse = zod.array(GetServicesChartResponseItem);

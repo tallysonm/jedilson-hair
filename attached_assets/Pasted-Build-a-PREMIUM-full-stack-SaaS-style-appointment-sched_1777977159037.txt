@@ -1,0 +1,244 @@
+Build a PREMIUM full-stack SaaS-style appointment scheduling web application for a Brazilian barbershop.
+
+⚠️ CRITICAL REQUIREMENTS:
+
+* All code must be written in English.
+* All UI text must be in Brazilian Portuguese.
+* The design must be HIGH-END, MODERN, and PREMIUM — similar to top SaaS products.
+* Focus heavily on UI/UX, animations, spacing, and visual hierarchy.
+* This app is intended to be SOLD, so it must look extremely professional.
+
+---
+
+🏪 BUSINESS INFORMATION
+
+Barbershop Name: Jedilson Hair
+Phone: (11) 97343-6623
+Address: R. Mademoiselle - Helena Maria, Osasco - SP, 06253-200
+
+Working Hours:
+
+* Tuesday to Saturday: 07:00 - 20:00
+* Sunday: 07:00 - 14:00
+* Monday: Closed
+
+---
+
+🎨 DESIGN SYSTEM (VERY IMPORTANT)
+
+Use a PREMIUM design system:
+
+Colors:
+
+* Primary: Deep Blue (#0B2545)
+* Secondary: Elegant Red (#C1121F)
+* Accent: Soft White (#F8F9FA)
+* Dark Background: #0A0A0A
+
+Style:
+
+* Glassmorphism + Soft Shadows
+* Rounded corners (2xl)
+* Smooth hover animations
+* Subtle gradients
+* Clean typography (Inter or Poppins)
+
+UX:
+
+* Microinteractions everywhere
+* Loading skeletons
+* Smooth transitions between pages
+
+---
+
+🧑‍💼 APP STRUCTURE
+
+Create ONE application with TWO experiences:
+
+1. Public Booking Page (Client)
+2. Admin Dashboard (Barber - protected route)
+
+---
+
+👤 CLIENT BOOKING EXPERIENCE (PREMIUM UI)
+
+Landing Section:
+
+* Large hero with barbershop name
+* Subtitle: "Agende seu horário com facilidade"
+* Call-to-action button: "Agendar agora"
+
+Service Selection (CARD GRID):
+Each service must be displayed in BEAUTIFUL cards with:
+
+* Name
+* Price
+* Duration
+* Hover animation
+
+Services:
+
+* Corte de cabelo simples — R$ 35,00 (30min)
+* Corte de cabelo simples + sobrancelha — R$ 45,00 (30min)
+* Corte de cabelo + barba — R$ 60,00 (50min)
+* Corte + penteado + barba + sobrancelha — R$ 80,00 (1h)
+* Corte + progressiva — R$ 90,00 (1h30min)
+* 2 cortes simples — R$ 70,00 (1h)
+* Pezinho — R$ 10,00 (5min)
+* Penteado — R$ 25,00 (20min)
+* Corte + luzes — R$ 110,00 (45min)
+* Corte + luzes branca — R$ 150,00 (45min)
+* Sobrancelha — R$ 10,00 (5min)
+* Barba — R$ 25,00 (20min)
+* Corte + relaxamento — R$ 60+ (40min)
+* Corte + penteado — R$ 45,00 (50min)
+* Corte dimil colorido — R$ 50,00 (50min)
+
+Booking Flow (STEP BY STEP UI):
+
+Step 1: Select service
+Step 2: Select date (calendar UI)
+Step 3: Select time (only available slots)
+Step 4: Enter name + phone
+Step 5: Confirmation screen (beautiful success UI)
+
+Features:
+
+* Prevent double booking
+* Real-time availability
+* Highlight selected options
+* Elegant confirmation animation
+
+---
+
+🔐 ADMIN DASHBOARD (VERY ADVANCED)
+
+Login Page:
+
+* Modern login UI
+* Username: admin
+* Password: 1234
+
+After login:
+
+---
+
+📊 DASHBOARD OVERVIEW (TOP SECTION)
+
+Cards with:
+
+* Faturamento do dia
+* Faturamento do mês
+* Total de agendamentos hoje
+* Ticket médio
+
+Include:
+
+* Animated counters
+* Icons
+* Gradient backgrounds
+
+---
+
+📈 ANALYTICS SECTION
+
+* Line chart: faturamento por dia
+* Bar chart: serviços mais vendidos
+* Smooth animations
+
+---
+
+📅 SCHEDULE (AGENDA VIEW - CORE FEATURE)
+
+Create a PROFESSIONAL calendar/agenda:
+
+Options:
+
+* Day view
+* Week view
+
+Each appointment block must show:
+
+* Client name
+* Service
+* Time
+* Price
+
+Color-coded appointments
+
+Allow:
+
+* Click to view details
+* Delete appointment
+* Mark as completed
+
+---
+
+📋 APPOINTMENT TABLE
+
+Below calendar, include table with:
+
+* Nome
+* Serviço
+* Data
+* Hora
+* Valor
+* Status
+
+---
+
+💰 FINANCIAL CONTROL
+
+Auto-calculate:
+
+* Daily revenue
+* Monthly revenue
+
+Filters:
+
+* Today
+* Last 7 days
+* Month
+
+---
+
+⚙️ FEATURES
+
+* Add manual appointment
+* Cancel appointment
+* Persist data (SQLite or JSON)
+* Responsive layout
+
+---
+
+💻 TECH STACK
+
+Frontend:
+
+* React + Vite
+* TailwindCSS
+* Framer Motion (animations)
+* Recharts (charts)
+
+Backend:
+
+* Node.js + Express
+
+Database:
+
+* SQLite
+
+---
+
+✨ FINAL TOUCH
+
+This MUST feel like:
+
+* A paid SaaS product
+* Premium barber system
+* Clean, modern, elegant
+
+Do NOT make it simple.
+Make it IMPRESSIVE.
+
+Focus on visual impact and usability.

@@ -29,6 +29,7 @@ import type {
   LoginResponse,
   RevenueChartEntry,
   Service,
+  ServicesChartEntry,
   UpdateAppointmentBody,
 } from "./api.schemas";
 
@@ -960,6 +961,81 @@ export function useGetRevenueChart<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetRevenueChartQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get most sold services (count of completed appointments per service)
+ */
+export const getGetServicesChartUrl = () => {
+  return `/api/dashboard/services-chart`;
+};
+
+export const getServicesChart = async (
+  options?: RequestInit,
+): Promise<ServicesChartEntry[]> => {
+  return customFetch<ServicesChartEntry[]>(getGetServicesChartUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetServicesChartQueryKey = () => {
+  return [`/api/dashboard/services-chart`] as const;
+};
+
+export const getGetServicesChartQueryOptions = <
+  TData = Awaited<ReturnType<typeof getServicesChart>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getServicesChart>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetServicesChartQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getServicesChart>>
+  > = ({ signal }) => getServicesChart({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getServicesChart>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetServicesChartQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getServicesChart>>
+>;
+export type GetServicesChartQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get most sold services (count of completed appointments per service)
+ */
+
+export function useGetServicesChart<
+  TData = Awaited<ReturnType<typeof getServicesChart>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getServicesChart>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetServicesChartQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

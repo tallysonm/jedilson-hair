@@ -243,6 +243,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/RevenueChartEntry"
 
+  /dashboard/services-chart:
+    get:
+      operationId: getServicesChart
+      tags: [dashboard]
+      summary: Get most sold services (count of completed appointments per service)
+      responses:
+        "200":
+          description: Services chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServicesChartEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -383,6 +398,19 @@ components:
         appointments:
           type: integer
       required: [date, revenue, appointments]
+
+    ServicesChartEntry:
+      type: object
+      properties:
+        serviceId:
+          type: string
+        serviceName:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: number
+      required: [serviceId, serviceName, count, revenue]
 
     ErrorResponse:
       type: object

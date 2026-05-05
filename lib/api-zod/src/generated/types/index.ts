@@ -21,5 +21,6 @@ export * from "./loginBody";
 export * from "./loginResponse";
 export * from "./revenueChartEntry";
 export * from "./service";
+export * from "./servicesChartEntry";
 export * from "./updateAppointmentBody";
 export * from "./updateAppointmentBodyStatus";
