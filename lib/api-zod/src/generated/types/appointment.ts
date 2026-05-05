@@ -17,5 +17,8 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  isRecurring: boolean;
+  recurrenceType?: string | null;
+  recurrenceGroupId?: string | null;
   createdAt: string;
 }

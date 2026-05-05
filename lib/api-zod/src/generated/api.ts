@@ -52,6 +52,9 @@ export const ListAppointmentsResponseItem = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  isRecurring: zod.boolean(),
+  recurrenceType: zod.string().nullish(),
+  recurrenceGroupId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListAppointmentsResponse = zod.array(ListAppointmentsResponseItem);
@@ -81,6 +84,30 @@ export const GetAvailableSlotsResponse = zod.object({
 });
 
 /**
+ * @summary Create recurring weekly appointments within a period
+ */
+export const CreateRecurringAppointmentsBody = zod.object({
+  clientName: zod.string(),
+  clientPhone: zod.string(),
+  serviceId: zod.string(),
+  time: zod.string(),
+  weekday: zod
+    .number()
+    .describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
+  period: zod.enum(["this_month", "next_2_months"]),
+  startDate: zod
+    .string()
+    .describe("Reference date to determine current month (YYYY-MM-DD)"),
+});
+
+/**
+ * @summary Delete all appointments in a recurrence group
+ */
+export const DeleteRecurringGroupParams = zod.object({
+  groupId: zod.coerce.string(),
+});
+
+/**
  * @summary Get a single appointment
  */
 export const GetAppointmentParams = zod.object({
@@ -97,6 +124,9 @@ export const GetAppointmentResponse = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  isRecurring: zod.boolean(),
+  recurrenceType: zod.string().nullish(),
+  recurrenceGroupId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -126,6 +156,9 @@ export const UpdateAppointmentResponse = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  isRecurring: zod.boolean(),
+  recurrenceType: zod.string().nullish(),
+  recurrenceGroupId: zod.string().nullish(),
   createdAt: zod.string(),
 });
 

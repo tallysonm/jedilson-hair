@@ -23,8 +23,11 @@ import {
   getListAppointmentsQueryKey,
   useUpdateAppointment,
   useDeleteAppointment,
+  useDeleteRecurringGroup,
   useListServices,
   useCreateAppointment,
+  useGetAvailableSlots,
+  getGetAvailableSlotsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -433,7 +436,9 @@ function CalendarTab() {
 
 function AppointmentsTab() {
   const [period, setPeriod] = useState<"day" | "week" | "month" | undefined>(undefined);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; groupId: string | null; isRecurring: boolean } | null>(null);
   const qc = useQueryClient();
+  const { toast } = useToast();
 
   const params = period ? { period } : {};
   const { data: appointments = [] } = useListAppointments(params, {
@@ -442,21 +447,43 @@ function AppointmentsTab() {
 
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
+  const groupDeleteMutation = useDeleteRecurringGroup();
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(params) });
 
   const handleComplete = (id: number) => {
     updateMutation.mutate(
       { id, data: { status: "completed" } },
-      { onSuccess: () => qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(params) }) }
+      { onSuccess: invalidate }
     );
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Excluir agendamento?")) {
-      deleteMutation.mutate(
-        { id },
-        { onSuccess: () => qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(params) }) }
-      );
-    }
+  const handleDeleteSingle = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(
+      { id: deleteTarget.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Excluído", description: "Agendamento removido." });
+          setDeleteTarget(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteGroup = () => {
+    if (!deleteTarget?.groupId) return;
+    groupDeleteMutation.mutate(
+      { groupId: deleteTarget.groupId },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "Grupo excluído", description: "Todos os agendamentos do grupo foram removidos." });
+          setDeleteTarget(null);
+        },
+      }
+    );
   };
 
   const filters: { label: string; value: typeof period }[] = [
@@ -478,7 +505,7 @@ function AppointmentsTab() {
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 period === f.value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-white"
               }`}
-              data-testid={`filter-${f.value || 'all'}`}
+              data-testid={`filter-${f.value || "all"}`}
             >
               {f.label}
             </button>
@@ -510,12 +537,19 @@ function AppointmentsTab() {
                 appointments.map((apt) => (
                   <tr key={apt.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-white">{apt.clientName}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{apt.clientName}</span>
+                        {apt.isRecurring && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/20 tracking-wide">
+                            RECORRENTE
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground">{apt.clientPhone}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{apt.serviceName}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground max-w-[160px] truncate">{apt.serviceName}</td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-white">{apt.date.split('-').reverse().join('/')}</div>
+                      <div className="text-sm text-white">{apt.date.split("-").reverse().join("/")}</div>
                       <div className="text-xs text-muted-foreground">{apt.time}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gold font-medium">R$ {Number(apt.servicePrice).toFixed(2)}</td>
@@ -531,11 +565,29 @@ function AppointmentsTab() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {apt.status === "pending" && (
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500 hover:text-green-400 hover:bg-green-500/10" onClick={() => handleComplete(apt.id)} data-testid={`btn-complete-${apt.id}`}>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                            onClick={() => handleComplete(apt.id)}
+                            data-testid={`btn-complete-${apt.id}`}
+                          >
                             <CheckCircle2 className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(apt.id)} data-testid={`btn-delete-${apt.id}`}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            setDeleteTarget({
+                              id: apt.id,
+                              groupId: apt.recurrenceGroupId ?? null,
+                              isRecurring: apt.isRecurring,
+                            })
+                          }
+                          data-testid={`btn-delete-${apt.id}`}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -547,6 +599,48 @@ function AppointmentsTab() {
           </table>
         </div>
       </div>
+
+      {/* Delete dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent className="bg-[#111] border border-white/10 rounded-2xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white text-base">Excluir agendamento</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm py-2">
+            {deleteTarget?.isRecurring
+              ? "Este é um agendamento recorrente. Deseja excluir apenas este ou todo o grupo?"
+              : "Confirmar exclusão deste agendamento?"}
+          </p>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-white/10 text-foreground hover:bg-white/5 rounded-lg"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 rounded-lg"
+              onClick={handleDeleteSingle}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteTarget?.isRecurring ? "Só este" : "Excluir"}
+            </Button>
+            {deleteTarget?.isRecurring && deleteTarget.groupId && (
+              <Button
+                size="sm"
+                className="bg-red-700/20 text-red-300 hover:bg-red-700/30 border border-red-700/30 rounded-lg"
+                onClick={handleDeleteGroup}
+                disabled={groupDeleteMutation.isPending}
+              >
+                Todo o grupo
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -563,20 +657,22 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
 
+  const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(
+    { date, serviceId },
+    {
+      query: {
+        enabled: !!date && !!serviceId,
+        queryKey: getGetAvailableSlotsQueryKey({ date, serviceId }),
+      },
+    }
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone || !serviceId || !date || !time) return;
 
     createMutation.mutate(
-      {
-        data: {
-          serviceId,
-          date,
-          time,
-          clientName: name,
-          clientPhone: phone,
-        },
-      },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone } },
       {
         onSuccess: () => {
           toast({ title: "Sucesso", description: "Agendamento criado." });
@@ -584,7 +680,7 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
           onComplete();
         },
         onError: () => {
-          toast({ title: "Erro", description: "Falha ao criar agendamento.", variant: "destructive" });
+          toast({ title: "Erro", description: "Horário indisponível ou conflito.", variant: "destructive" });
         },
       }
     );
@@ -649,14 +745,35 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Horário</label>
-            <Input
-              type="time"
+            <Select
               value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="bg-input border-border h-12"
-              required
-              data-testid="input-new-time"
-            />
+              onValueChange={setTime}
+              disabled={!date || !serviceId || slotsLoading}
+            >
+              <SelectTrigger className="bg-input border-border h-12" data-testid="input-new-time">
+                <SelectValue
+                  placeholder={
+                    !date || !serviceId
+                      ? "Selecione data e serviço"
+                      : slotsLoading
+                        ? "Carregando..."
+                        : "Selecione um horário"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border max-h-60 overflow-y-auto">
+                {(slotsData?.slots ?? []).map((slot: string) => (
+                  <SelectItem key={slot} value={slot}>
+                    {slot}
+                  </SelectItem>
+                ))}
+                {!slotsLoading && date && serviceId && (slotsData?.slots ?? []).length === 0 && (
+                  <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+                    Sem horários disponíveis
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

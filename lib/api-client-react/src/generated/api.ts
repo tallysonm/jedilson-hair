@@ -20,6 +20,7 @@ import type {
   Appointment,
   AvailableSlots,
   CreateAppointmentBody,
+  CreateRecurringAppointmentBody,
   DashboardSummary,
   ErrorResponse,
   GetAvailableSlotsParams,
@@ -27,6 +28,7 @@ import type {
   ListAppointmentsParams,
   LoginBody,
   LoginResponse,
+  RecurringAppointmentResult,
   RevenueChartEntry,
   Service,
   ServicesChartEntry,
@@ -474,6 +476,180 @@ export function useGetAvailableSlots<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Create recurring weekly appointments within a period
+ */
+export const getCreateRecurringAppointmentsUrl = () => {
+  return `/api/appointments/recurring`;
+};
+
+export const createRecurringAppointments = async (
+  createRecurringAppointmentBody: CreateRecurringAppointmentBody,
+  options?: RequestInit,
+): Promise<RecurringAppointmentResult> => {
+  return customFetch<RecurringAppointmentResult>(
+    getCreateRecurringAppointmentsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createRecurringAppointmentBody),
+    },
+  );
+};
+
+export const getCreateRecurringAppointmentsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRecurringAppointments>>,
+    TError,
+    { data: BodyType<CreateRecurringAppointmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRecurringAppointments>>,
+  TError,
+  { data: BodyType<CreateRecurringAppointmentBody> },
+  TContext
+> => {
+  const mutationKey = ["createRecurringAppointments"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRecurringAppointments>>,
+    { data: BodyType<CreateRecurringAppointmentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRecurringAppointments(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRecurringAppointmentsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createRecurringAppointments>>
+>;
+export type CreateRecurringAppointmentsMutationBody =
+  BodyType<CreateRecurringAppointmentBody>;
+export type CreateRecurringAppointmentsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create recurring weekly appointments within a period
+ */
+export const useCreateRecurringAppointments = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRecurringAppointments>>,
+    TError,
+    { data: BodyType<CreateRecurringAppointmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createRecurringAppointments>>,
+  TError,
+  { data: BodyType<CreateRecurringAppointmentBody> },
+  TContext
+> => {
+  return useMutation(getCreateRecurringAppointmentsMutationOptions(options));
+};
+
+/**
+ * @summary Delete all appointments in a recurrence group
+ */
+export const getDeleteRecurringGroupUrl = (groupId: string) => {
+  return `/api/appointments/group/${groupId}`;
+};
+
+export const deleteRecurringGroup = async (
+  groupId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteRecurringGroupUrl(groupId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteRecurringGroupMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRecurringGroup>>,
+    TError,
+    { groupId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteRecurringGroup>>,
+  TError,
+  { groupId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteRecurringGroup"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteRecurringGroup>>,
+    { groupId: string }
+  > = (props) => {
+    const { groupId } = props ?? {};
+
+    return deleteRecurringGroup(groupId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteRecurringGroupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteRecurringGroup>>
+>;
+
+export type DeleteRecurringGroupMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete all appointments in a recurrence group
+ */
+export const useDeleteRecurringGroup = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRecurringGroup>>,
+    TError,
+    { groupId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteRecurringGroup>>,
+  TError,
+  { groupId: string },
+  TContext
+> => {
+  return useMutation(getDeleteRecurringGroupMutationOptions(options));
+};
 
 /**
  * @summary Get a single appointment

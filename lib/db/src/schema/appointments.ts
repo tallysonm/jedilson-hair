@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,6 +12,9 @@ export const appointmentsTable = pgTable("appointments", {
   date: text("date").notNull(),
   time: text("time").notNull(),
   status: text("status", { enum: ["pending", "completed", "cancelled"] }).notNull().default("pending"),
+  isRecurring: boolean("is_recurring").notNull().default(false),
+  recurrenceType: text("recurrence_type"),
+  recurrenceGroupId: text("recurrence_group_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

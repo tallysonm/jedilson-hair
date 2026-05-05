@@ -129,6 +129,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/AvailableSlots"
 
+  /appointments/recurring:
+    post:
+      operationId: createRecurringAppointments
+      tags: [appointments]
+      summary: Create recurring weekly appointments within a period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecurringAppointmentBody"
+      responses:
+        "201":
+          description: Recurring appointments created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecurringAppointmentResult"
+
+  /appointments/group/{groupId}:
+    delete:
+      operationId: deleteRecurringGroup
+      tags: [appointments]
+      summary: Delete all appointments in a recurrence group
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /appointments/{id}:
     get:
       operationId: getAppointment
@@ -306,9 +340,17 @@ components:
         status:
           type: string
           enum: [pending, completed, cancelled]
+        isRecurring:
+          type: boolean
+        recurrenceType:
+          type: string
+          nullable: true
+        recurrenceGroupId:
+          type: string
+          nullable: true
         createdAt:
           type: string
-      required: [id, clientName, clientPhone, serviceId, serviceName, servicePrice, date, time, status, createdAt]
+      required: [id, clientName, clientPhone, serviceId, serviceName, servicePrice, date, time, status, isRecurring, createdAt]
 
     CreateAppointmentBody:
       type: object
@@ -411,6 +453,44 @@ components:
         revenue:
           type: number
       required: [serviceId, serviceName, count, revenue]
+
+    CreateRecurringAppointmentBody:
+      type: object
+      properties:
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        serviceId:
+          type: string
+        time:
+          type: string
+        weekday:
+          type: integer
+          description: "Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"
+        period:
+          type: string
+          enum: [this_month, next_2_months]
+        startDate:
+          type: string
+          description: Reference date to determine current month (YYYY-MM-DD)
+      required: [clientName, clientPhone, serviceId, time, weekday, period, startDate]
+
+    RecurringAppointmentResult:
+      type: object
+      properties:
+        groupId:
+          type: string
+        created:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        skipped:
+          type: array
+          items:
+            type: string
+          description: Dates that were skipped due to conflicts
+      required: [groupId, created, skipped]
 
     ErrorResponse:
       type: object

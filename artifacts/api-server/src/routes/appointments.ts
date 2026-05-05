@@ -253,6 +253,18 @@ router.patch("/:id", async (req, res) => {
   res.json({ ...updated, servicePrice: Number(updated.servicePrice), createdAt: updated.createdAt.toISOString() });
 });
 
+router.delete("/group/:groupId", async (req, res) => {
+  const groupId = req.params["groupId"];
+  if (!groupId) {
+    res.status(400).json({ error: "Invalid group ID" });
+    return;
+  }
+  await db
+    .delete(appointmentsTable)
+    .where(eq(appointmentsTable.recurrenceGroupId, groupId));
+  res.status(204).send();
+});
+
 router.delete("/:id", async (req, res) => {
   const parsed = DeleteAppointmentParams.safeParse(req.params);
   if (!parsed.success) {

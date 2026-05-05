@@ -37,6 +37,9 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  isRecurring: boolean;
+  recurrenceType?: string | null;
+  recurrenceGroupId?: string | null;
   createdAt: string;
 }
 
@@ -101,6 +104,33 @@ export interface ServicesChartEntry {
   serviceName: string;
   count: number;
   revenue: number;
+}
+
+export type CreateRecurringAppointmentBodyPeriod =
+  (typeof CreateRecurringAppointmentBodyPeriod)[keyof typeof CreateRecurringAppointmentBodyPeriod];
+
+export const CreateRecurringAppointmentBodyPeriod = {
+  this_month: "this_month",
+  next_2_months: "next_2_months",
+} as const;
+
+export interface CreateRecurringAppointmentBody {
+  clientName: string;
+  clientPhone: string;
+  serviceId: string;
+  time: string;
+  /** Day of week: 0=Sunday, 1=Monday, ... 6=Saturday */
+  weekday: number;
+  period: CreateRecurringAppointmentBodyPeriod;
+  /** Reference date to determine current month (YYYY-MM-DD) */
+  startDate: string;
+}
+
+export interface RecurringAppointmentResult {
+  groupId: string;
+  created: Appointment[];
+  /** Dates that were skipped due to conflicts */
+  skipped: string[];
 }
 
 export interface ErrorResponse {
