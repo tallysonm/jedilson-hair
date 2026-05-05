@@ -1,0 +1,336 @@
+Build an EXTREMELY PREMIUM SaaS-style barbershop scheduling application.
+
+⚠️ RULES:
+
+* Code MUST be in English
+* UI MUST be in Brazilian Portuguese
+* The design must be visually stunning, modern, and high-end
+* This must look like a paid professional SaaS product
+* Focus heavily on UI polish and calendar experience
+
+---
+
+🏪 BUSINESS
+
+Name: Jedilson Hair
+Phone: (11) 97343-6623
+Location: Osasco - SP
+
+---
+
+🎨 DESIGN SYSTEM (LUXURY)
+
+Colors:
+
+* Background: #0D0D0D
+* Primary: #1D3557
+* Accent: #E63946
+* Text: #F1FAEE
+
+Style:
+
+* Minimalist
+* Premium spacing
+* Rounded corners (xl)
+* Soft shadows
+* Glassmorphism cards
+* Smooth animations (Framer Motion)
+* Subtle gradients
+
+⚠️ IMPORTANT:
+
+* Small logo on top-left only
+* NO big banners
+* Clean layout with breathing space
+
+---
+
+👤 CLIENT PAGE (SIMPLE AND CLEAN)
+
+Top:
+
+* Small logo
+* "Jedilson Hair"
+* Button: "Área do Administrador"
+
+Centered card:
+
+Title:
+"Agende seu horário"
+
+Fields:
+
+* Nome
+* Telefone
+* Serviço (dropdown)
+* Data (calendar picker)
+* Horário (dynamic available slots)
+
+Button:
+"Confirmar Agendamento"
+
+After booking:
+
+* Smooth success animation
+* Message:
+  "Agendamento confirmado com sucesso!"
+
+---
+
+📲 WHATSAPP
+
+Generate message:
+
+"Novo agendamento:
+Cliente: {name}
+Serviço: {service}
+Data: {date}
+Hora: {time}"
+
+Button link:
+https://wa.me/5511973436623?text=ENCODED_MESSAGE
+
+---
+
+🔐 ADMIN LOGIN
+
+Button:
+"Área do Administrador"
+
+Login:
+
+* user: admin
+* password: 1234
+
+Premium login UI:
+
+* Centered card
+* Dark glass style
+* Smooth animations
+
+---
+
+📊 ADMIN DASHBOARD
+
+Top cards:
+
+* Faturamento do dia
+* Faturamento do mês
+* Total de agendamentos hoje
+
+Animated counters + icons
+
+---
+
+📅 PREMIUM CALENDAR (CORE FEATURE - VERY IMPORTANT)
+
+Use FullCalendar but heavily customized.
+
+REQUIREMENTS:
+
+* Dark theme fully customized (NOT default look)
+* Remove default ugly styles
+* Clean grid layout
+* Smooth hover effects
+* Rounded event blocks
+* Soft shadows
+* Elegant spacing
+
+VIEWS:
+
+* Week view (default)
+* Day view
+
+TIME GRID:
+
+* Vertical timeline (like Google Calendar)
+* Clear hour separation
+* Thin subtle lines
+
+EVENT BLOCKS:
+
+Each appointment must be displayed as a BEAUTIFUL CARD:
+
+Inside block:
+
+* Client name (bold)
+* Service (small text)
+* Time
+
+STYLE:
+
+* Rounded corners
+* Gradient background (blue/red mix)
+* Shadow
+* Padding
+* Hover animation (scale + glow)
+
+COLORS:
+
+* Different colors per service type (subtle variation)
+
+INTERACTIONS:
+
+* Click event → open modal
+
+* Modal shows:
+
+  * Nome
+  * Telefone
+  * Serviço
+  * Data
+  * Hora
+  * Valor
+
+* Smooth open/close animation
+
+---
+
+📋 APPOINTMENT TABLE
+
+Below or side:
+
+Columns:
+
+* Cliente
+* Serviço
+* Data
+* Hora
+* Telefone
+* Valor
+* Status
+
+Actions:
+
+* Delete
+* Mark as completed
+
+---
+
+💰 FINANCIAL
+
+Auto calculate:
+
+* Total do dia
+* Total do mês
+
+Charts:
+
+* Line chart (revenue evolution)
+* Bar chart (services popularity)
+
+---
+
+🧠 SMART SCHEDULING SYSTEM
+
+Each service has:
+
+* name
+* price
+* duration (minutes)
+
+---
+
+⏱️ TIME SYSTEM
+
+* Generate slots every 30 minutes
+
+---
+
+🧼 CLEANING BUFFER
+
+Add 10 minutes after each appointment.
+
+---
+
+🚫 BLOCKING SYSTEM
+
+For each appointment:
+
+start = selected time
+end = start + duration + buffer
+
+Remove ALL overlapping slots
+
+---
+
+📐 OVERLAP RULE
+
+newStart < existingEnd
+AND
+newEnd > existingStart
+
+→ BLOCK
+
+---
+
+🛑 BACKEND VALIDATION
+
+Before saving:
+
+* Calculate end time
+* Check all appointments same day
+* If overlap:
+
+Return:
+"Horário indisponível"
+
+---
+
+⚡ FRONTEND BEHAVIOR
+
+* When selecting service → use duration
+* When selecting date → load appointments
+* Show ONLY available time slots
+
+---
+
+🗄️ DATABASE (SQLite)
+
+Fields:
+
+* id
+* name
+* phone
+* service
+* date
+* time
+* duration
+* price
+* status
+
+---
+
+⚙️ BACKEND
+
+Node.js + Express
+
+Routes:
+
+* POST /appointments
+* GET /appointments
+* DELETE /appointments
+
+---
+
+💻 FRONTEND
+
+* React + Vite
+* TailwindCSS
+* Framer Motion
+* FullCalendar (customized heavily)
+* Recharts
+
+---
+
+✨ FINAL GOAL
+
+* Beautiful like a premium SaaS
+* Calendar must be the highlight of the system
+* No double booking
+* Smooth and elegant UX
+
+⚠️ DO NOT USE DEFAULT CALENDAR STYLE
+⚠️ MUST LOOK CUSTOM AND PREMIUM
+
+Make it visually IMPRESSIVE.

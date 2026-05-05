@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -8,6 +8,9 @@ import {
   LogOut,
   Trash2,
   CheckCircle2,
+  TrendingUp,
+  CalendarCheck,
+  DollarSign,
 } from "lucide-react";
 import {
   useGetDashboardSummary,
@@ -107,15 +110,57 @@ export default function AdminDashboardPage() {
   );
 }
 
+function AnimatedNumber({ target, prefix = "" }: { target: number; prefix?: string }) {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef<number>(0);
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 900;
+    const animate = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(target * ease);
+      if (progress < 1) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target]);
+  return <>{prefix}{display.toFixed(prefix ? 2 : 0)}</>;
+}
+
 function OverviewTab() {
   const { data: summary } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const { data: revenueData } = useGetRevenueChart({ query: { queryKey: getGetRevenueChartQueryKey() } });
   const { data: servicesData } = useGetServicesChart({ query: { queryKey: getGetServicesChartQueryKey() } });
 
   const cards = [
-    { title: "Faturamento Hoje", value: `R$ ${(summary?.todayRevenue || 0).toFixed(2)}` },
-    { title: "Faturamento do Mês", value: `R$ ${(summary?.monthRevenue || 0).toFixed(2)}` },
-    { title: "Agendamentos Hoje", value: String(summary?.todayAppointments || 0) },
+    {
+      title: "Faturamento Hoje",
+      value: summary?.todayRevenue || 0,
+      prefix: "R$ ",
+      icon: DollarSign,
+      color: "from-emerald-500/20 to-emerald-600/5",
+      iconColor: "text-emerald-400",
+      iconBg: "bg-emerald-500/10",
+    },
+    {
+      title: "Faturamento do Mês",
+      value: summary?.monthRevenue || 0,
+      prefix: "R$ ",
+      icon: TrendingUp,
+      color: "from-blue-500/20 to-blue-600/5",
+      iconColor: "text-blue-400",
+      iconBg: "bg-blue-500/10",
+    },
+    {
+      title: "Agendamentos Hoje",
+      value: summary?.todayAppointments || 0,
+      prefix: "",
+      icon: CalendarCheck,
+      color: "from-rose-500/20 to-rose-600/5",
+      iconColor: "text-rose-400",
+      iconBg: "bg-rose-500/10",
+    },
   ];
 
   return (
@@ -126,13 +171,20 @@ function OverviewTab() {
         {cards.map((card, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="glass rounded-xl p-6"
+            transition={{ delay: i * 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className={`relative overflow-hidden glass rounded-2xl p-6 bg-gradient-to-br ${card.color}`}
           >
-            <h3 className="text-muted-foreground text-sm font-medium mb-2">{card.title}</h3>
-            <p className="text-3xl font-bold text-white">{card.value}</p>
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-muted-foreground text-sm font-medium">{card.title}</p>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.iconBg}`}>
+                <card.icon className={`w-4 h-4 ${card.iconColor}`} />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-white tracking-tight">
+              <AnimatedNumber target={card.value} prefix={card.prefix} />
+            </p>
           </motion.div>
         ))}
       </div>
@@ -142,22 +194,25 @@ function OverviewTab() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-2 glass rounded-xl p-6"
+          className="lg:col-span-2 glass rounded-2xl p-6"
         >
-          <h3 className="text-lg font-bold text-white mb-6">Faturamento (14 dias)</h3>
-          <div className="h-[300px] w-full">
+          <h3 className="text-base font-bold text-white mb-6 tracking-tight">Faturamento — últimos 14 dias</h3>
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData?.slice(-14) || []}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#E63946" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="#E63946" stopOpacity={0.35} />
                     <stop offset="95%" stopColor="#E63946" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="date" stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => v.slice(5)} />
-                <YAxis stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
-                <RechartsTooltip contentStyle={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px" }} />
-                <Area type="monotone" dataKey="revenue" stroke="#E63946" strokeWidth={2} fillOpacity={1} fill="url(#colorRev)" />
+                <XAxis dataKey="date" stroke="#6B7280" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => v.slice(5)} />
+                <YAxis stroke="#6B7280" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "10px", fontSize: "12px" }}
+                  labelStyle={{ color: "#F1FAEE" }}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#E63946" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -167,16 +222,23 @@ function OverviewTab() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-2xl p-6"
         >
-          <h3 className="text-lg font-bold text-white mb-6">Serviços Mais Vendidos</h3>
-          <div className="h-[300px] w-full">
+          <h3 className="text-base font-bold text-white mb-6 tracking-tight">Serviços mais vendidos</h3>
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={servicesData || []} layout="vertical" margin={{ left: 0 }}>
                 <XAxis type="number" hide />
-                <YAxis dataKey="serviceName" type="category" stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} width={90} />
-                <RechartsTooltip contentStyle={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
-                <Bar dataKey="count" fill="#E63946" radius={[0, 4, 4, 0]} />
+                <YAxis dataKey="serviceName" type="category" stroke="#6B7280" fontSize={10} tickLine={false} axisLine={false} width={86} tick={{ fill: "#6B7280" }} />
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "10px", fontSize: "12px" }}
+                  cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                  {(servicesData || []).map((_: unknown, index: number) => (
+                    <rect key={index} fill={`hsl(${356 - index * 15}, 70%, ${55 - index * 2}%)`} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -186,8 +248,30 @@ function OverviewTab() {
   );
 }
 
+// Gradient palette per service category
+const SERVICE_GRADIENTS: Record<string, string> = {
+  "corte-simples":               "linear-gradient(135deg, #1D3557 0%, #2a5298 100%)",
+  "corte-sobrancelha":           "linear-gradient(135deg, #1a2f50 0%, #2563eb 100%)",
+  "corte-barba":                 "linear-gradient(135deg, #7c1d26 0%, #E63946 100%)",
+  "corte-penteado-barba-sobrancelha": "linear-gradient(135deg, #6d1e4c 0%, #c2185b 100%)",
+  "corte-progressiva":           "linear-gradient(135deg, #4a1d96 0%, #7c3aed 100%)",
+  "dois-cortes":                 "linear-gradient(135deg, #1d4556 0%, #0ea5e9 100%)",
+  "pezinho":                     "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
+  "penteado":                    "linear-gradient(135deg, #1c3557 0%, #0284c7 100%)",
+  "corte-luzes":                 "linear-gradient(135deg, #713f12 0%, #d97706 100%)",
+  "corte-luzes-branca":          "linear-gradient(135deg, #7f1d1d 0%, #f59e0b 100%)",
+  "sobrancelha":                 "linear-gradient(135deg, #14532d 0%, #22c55e 100%)",
+  "barba":                       "linear-gradient(135deg, #7c1d26 0%, #f43f5e 100%)",
+  "corte-relaxamento":           "linear-gradient(135deg, #312e81 0%, #6366f1 100%)",
+  "corte-penteado":              "linear-gradient(135deg, #1d3557 0%, #3b82f6 100%)",
+  "corte-dimil-colorido":        "linear-gradient(135deg, #701a75 0%, #a855f7 100%)",
+};
+
+const COMPLETED_GRADIENT = "linear-gradient(135deg, #14532d 0%, #22c55e 100%)";
+const CANCELLED_GRADIENT = "linear-gradient(135deg, #1c1c1c 0%, #4b5563 100%)";
+
 function CalendarTab() {
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Record<string, unknown> | null>(null);
   const qc = useQueryClient();
   const { data: appointments = [] } = useListAppointments({}, { query: { queryKey: getListAppointmentsQueryKey({}) } });
 
@@ -197,22 +281,50 @@ function CalendarTab() {
 
   const events = appointments.map((apt) => ({
     id: String(apt.id),
-    title: `${apt.clientName} - ${apt.serviceName}`,
+    title: apt.clientName,
     start: `${apt.date}T${apt.time}`,
-    color: apt.status === 'completed' ? '#22c55e' : apt.status === 'cancelled' ? '#6b7280' : '#E63946',
-    extendedProps: apt
+    extendedProps: apt,
+    // FC uses these for its own layout — we override visually via eventContent
+    backgroundColor: "transparent",
+    borderColor: "transparent",
   }));
+
+  const renderEventContent = (eventInfo: { event: { extendedProps: Record<string, unknown>; startStr: string } }) => {
+    const apt = eventInfo.event.extendedProps;
+    const serviceId = apt.serviceId as string;
+    const status = apt.status as string;
+    const gradient =
+      status === "completed" ? COMPLETED_GRADIENT :
+      status === "cancelled" ? CANCELLED_GRADIENT :
+      (SERVICE_GRADIENTS[serviceId] ?? "linear-gradient(135deg, #1D3557 0%, #E63946 100%)");
+
+    const timeStr = eventInfo.event.startStr.slice(11, 16);
+
+    return (
+      <div
+        className="cal-event-card"
+        style={{
+          background: gradient,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+        }}
+      >
+        <div className="cal-event-name">{apt.clientName as string}</div>
+        <div className="cal-event-service">{apt.serviceName as string}</div>
+        <div className="cal-event-time">{timeStr}</div>
+      </div>
+    );
+  };
 
   const handleComplete = () => {
     if (!selectedEvent) return;
     updateMutation.mutate(
-      { id: selectedEvent.id, data: { status: "completed" } },
+      { id: selectedEvent.id as number, data: { status: "completed" } },
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
           toast({ title: "Sucesso", description: "Agendamento concluído." });
           setSelectedEvent(null);
-        }
+        },
       }
     );
   };
@@ -220,21 +332,21 @@ function CalendarTab() {
   const handleDelete = () => {
     if (!selectedEvent) return;
     deleteMutation.mutate(
-      { id: selectedEvent.id },
+      { id: selectedEvent.id as number },
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
           toast({ title: "Sucesso", description: "Agendamento excluído." });
           setSelectedEvent(null);
-        }
+        },
       }
     );
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto h-[80vh]">
+    <div className="space-y-5 max-w-6xl mx-auto" style={{ height: "calc(100vh - 120px)" }}>
       <h2 className="text-2xl font-bold text-white tracking-tight">Calendário</h2>
-      <div className="glass rounded-xl p-6 h-full">
+      <div className="glass rounded-2xl p-5 overflow-hidden" style={{ height: "calc(100% - 52px)" }}>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -243,55 +355,78 @@ function CalendarTab() {
           slotMinTime="07:00:00"
           slotMaxTime="21:00:00"
           events={events}
-          eventClick={(info) => setSelectedEvent(info.event.extendedProps)}
+          eventContent={renderEventContent}
+          eventClick={(info) => setSelectedEvent(info.event.extendedProps as Record<string, unknown>)}
           height="100%"
+          eventMinHeight={36}
+          nowIndicator
+          allDaySlot={false}
         />
       </div>
 
-      <Dialog open={!!selectedEvent} onOpenChange={(o) => !o && setSelectedEvent(null)}>
-        <DialogContent className="bg-card border-border sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-white">Detalhes do Agendamento</DialogTitle>
-          </DialogHeader>
-          {selectedEvent && (
-            <div className="space-y-3 py-4">
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground text-sm">Cliente</span>
-                <span className="text-white font-medium">{selectedEvent.clientName}</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground text-sm">Serviço</span>
-                <span className="text-white font-medium text-right max-w-[200px]">{selectedEvent.serviceName}</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground text-sm">Data/Hora</span>
-                <span className="text-white font-medium">{selectedEvent.date.split('-').reverse().join('/')} às {selectedEvent.time}</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground text-sm">Telefone</span>
-                <span className="text-white font-medium">{selectedEvent.clientPhone}</span>
-              </div>
-              <div className="flex justify-between pt-1">
-                <span className="text-muted-foreground text-sm">Valor</span>
-                <span className="text-gold font-semibold">R$ {Number(selectedEvent.servicePrice).toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex justify-end gap-2 sm:justify-end">
-            <Button variant="outline" className="border-border text-foreground hover:bg-white/5" onClick={() => setSelectedEvent(null)}>
-              Fechar
-            </Button>
-            {selectedEvent?.status === "pending" && (
-              <Button variant="outline" className="bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20" onClick={handleComplete}>
-                Concluir
-              </Button>
-            )}
-            <Button variant="outline" className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20" onClick={handleDelete}>
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AnimatePresence>
+        {selectedEvent && (
+          <Dialog open onOpenChange={(o) => !o && setSelectedEvent(null)}>
+            <DialogContent className="bg-[#111] border border-white/10 sm:max-w-md rounded-2xl shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-white text-base font-bold">Detalhes do Agendamento</DialogTitle>
+              </DialogHeader>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-3 py-2"
+              >
+                {[
+                  { label: "Cliente", value: selectedEvent.clientName as string },
+                  { label: "Telefone", value: selectedEvent.clientPhone as string },
+                  { label: "Serviço", value: selectedEvent.serviceName as string },
+                  {
+                    label: "Data / Hora",
+                    value: `${String(selectedEvent.date).split("-").reverse().join("/")} às ${selectedEvent.time as string}`,
+                  },
+                ].map((row) => (
+                  <div key={row.label} className="flex justify-between items-center py-2.5 border-b border-white/5">
+                    <span className="text-muted-foreground text-sm">{row.label}</span>
+                    <span className="text-white font-medium text-sm text-right max-w-[200px]">{row.value}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center py-2.5">
+                  <span className="text-muted-foreground text-sm">Valor</span>
+                  <span className="text-gold font-bold text-base">
+                    R$ {Number(selectedEvent.servicePrice).toFixed(2)}
+                  </span>
+                </div>
+              </motion.div>
+              <DialogFooter className="flex gap-2 sm:justify-end pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-white/10 text-foreground hover:bg-white/5 rounded-lg"
+                  onClick={() => setSelectedEvent(null)}
+                >
+                  Fechar
+                </Button>
+                {selectedEvent.status === "pending" && (
+                  <Button
+                    size="sm"
+                    className="bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20 rounded-lg"
+                    onClick={handleComplete}
+                  >
+                    Concluir
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 rounded-lg"
+                  onClick={handleDelete}
+                >
+                  Excluir
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
