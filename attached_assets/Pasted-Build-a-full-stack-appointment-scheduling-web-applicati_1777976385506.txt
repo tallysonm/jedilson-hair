@@ -1,0 +1,145 @@
+Build a full-stack appointment scheduling web application for a Brazilian barbershop called "Gedilson Rai Barbershop".
+
+⚠️ IMPORTANT:
+- All code, structure, and logic must be written in English.
+- The UI (labels, buttons, texts) MUST be in Brazilian Portuguese.
+- The design must be modern, elegant, and premium, using the barbershop color palette:
+  - Red (#C1121F)
+  - Blue (#1D3557)
+  - White (#FFFFFF)
+- The app must look visually stunning and professional to be sold commercially.
+
+--------------------------------------------------
+
+🧠 APP STRUCTURE
+
+Create a single web app with two main views:
+1. Client Booking Interface (public access)
+2. Admin Dashboard (barber access with simple login)
+
+--------------------------------------------------
+
+👤 CLIENT SIDE (BOOKING PAGE)
+
+Goal: Simple, fast, beautiful booking experience.
+
+Include:
+
+🏪 Barbershop Info:
+- Name: Gedilson Rai Barbershop
+- Address: R. Mademoiselle - Helena Maria, Osasco - SP, 06253-200
+- Phone: (11) 97343-6623
+- Opening Hours:
+  - Tuesday to Saturday: 07:00 - 20:00
+  - Sunday: 07:00 - 14:00
+  - Monday: Closed
+
+💇 Services List (with duration and price):
+
+- Corte de cabelo simples — R$ 35,00 (30min)
+- Corte de cabelo simples + sobrancelha — R$ 45,00 (30min)
+- Corte de cabelo + barba — R$ 60,00 (50min)
+- Corte de cabelo + penteado + barba + sobrancelha — R$ 80,00 (1h)
+- Corte de cabelo + progressiva — R$ 90,00 (1h30min)
+- 2 cortes de cabelo simples — R$ 70,00 (1h)
+- Pezinho do cabelo — R$ 10,00 (5min)
+- Penteado — R$ 25,00 (20min)
+- Corte + luzes — R$ 110,00 (45min)
+- Corte + luzes branca — R$ 150,00 (45min)
+- Sobrancelha — R$ 10,00 (5min)
+- Barba — R$ 25,00 (20min)
+- Corte de cabelo + relaxamento — R$ 60,00+ (40min)
+- Corte de cabelo + penteado — R$ 45,00 (50min)
+- Corte de cabelo dimil colorido — R$ 50,00 (50min)
+
+📅 Booking Flow:
+1. Select service
+2. Select date
+3. Select available time slot
+4. Enter name and phone
+5. Confirm booking
+
+✔️ Features:
+- Prevent double booking
+- Show only available times
+- Clean confirmation screen
+- WhatsApp-style confirmation message (optional simulation)
+
+🎨 UI:
+- Cards for services
+- Smooth animations
+- Modern buttons
+- Mobile-first design
+
+--------------------------------------------------
+
+🔐 ADMIN DASHBOARD (BARBER SIDE)
+
+Simple login (hardcoded):
+- Username: admin
+- Password: 1234
+
+After login, show:
+
+📊 Dashboard Overview:
+- Total revenue (today)
+- Total revenue (month)
+- Number of appointments today
+- Graph (daily revenue evolution)
+
+📅 Schedule View:
+- Table or calendar-style layout
+- Show:
+  - Client name
+  - Service
+  - Time
+  - Price
+
+💰 Financial Tracking:
+- Auto-calculate revenue based on bookings
+- Filter by:
+  - Day
+  - Week
+  - Month
+
+🛠️ Controls:
+- Delete appointment
+- Mark as completed
+- Add manual appointment
+
+--------------------------------------------------
+
+⚙️ TECH STACK
+
+Use:
+- Frontend: React (with TailwindCSS for styling)
+- Backend: Node.js + Express
+- Database: SQLite or simple JSON storage
+- State management: React hooks
+
+--------------------------------------------------
+
+✨ DESIGN REQUIREMENTS
+
+- Premium barbershop style
+- Use red, blue, and white consistently
+- Add subtle shadows and rounded corners
+- Smooth transitions
+- Clean typography
+
+--------------------------------------------------
+
+📱 EXTRA FEATURES
+
+- Fully responsive (mobile + desktop)
+- Fast loading
+- Simple navigation
+- Clean UX (very important)
+
+--------------------------------------------------
+
+🎯 FINAL GOAL
+
+The app must feel like a professional SaaS product that can be sold to barbershops.
+
+Make it visually impressive, intuitive, and elegant.
