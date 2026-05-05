@@ -1,0 +1,228 @@
+Build an EXTREMELY PREMIUM SaaS-style barbershop scheduling application.
+
+⚠️ STRICT REQUIREMENTS:
+
+* Code MUST be in English
+* UI MUST be in Brazilian Portuguese
+* Design MUST be ultra modern, elegant, luxurious
+* This product must look like a high-end paid SaaS
+* Focus heavily on UI/UX, spacing, animations, and visual polish
+
+---
+
+🏪 BUSINESS
+
+Name: Jedilson Hair
+Phone: (11) 97343-6623
+Location: Osasco - SP
+
+---
+
+🎨 DESIGN SYSTEM (LUXURY)
+
+* Background: #0D0D0D
+* Primary: #1D3557
+* Accent: #E63946
+* Text: #F1FAEE
+
+STYLE:
+
+* Minimalist
+* Premium spacing
+* Rounded corners
+* Soft shadows
+* Smooth transitions
+* Micro-interactions
+* Glass effect cards
+
+⚠️ IMPORTANT:
+
+* Use SMALL logo on top-left
+* DO NOT create big banners
+
+---
+
+👤 CLIENT PAGE (SIMPLE + BEAUTIFUL)
+
+Top bar:
+
+* Small logo (left)
+* "Jedilson Hair"
+* Button: "Área do Administrador"
+
+Centered card:
+
+Title:
+👉 "Agende seu horário"
+
+Fields:
+
+* Nome
+* Telefone
+* Serviço (dropdown)
+* Data (calendar picker)
+* Horário (auto available)
+
+Button:
+👉 "Confirmar Agendamento"
+
+After submit:
+
+* Smooth success animation
+* Message:
+  "Agendamento confirmado com sucesso!"
+
+---
+
+📲 WHATSAPP INTEGRATION
+
+After booking:
+
+Generate message:
+
+"Novo agendamento:
+Cliente: {name}
+Serviço: {service}
+Data: {date}
+Hora: {time}"
+
+Button:
+👉 "Enviar no WhatsApp"
+
+Use:
+https://wa.me/5511973436623?text=ENCODED_MESSAGE
+
+---
+
+🔐 ADMIN LOGIN
+
+Click:
+👉 "Área do Administrador"
+
+Login screen:
+
+* Username: admin
+* Password: 1234
+
+Premium login UI (dark card, animation)
+
+---
+
+📊 ADMIN DASHBOARD
+
+Top cards:
+
+* Faturamento do dia
+* Faturamento do mês
+* Agendamentos hoje
+
+With animation and icons
+
+---
+
+📅 CALENDAR (GOOGLE STYLE)
+
+Use FullCalendar
+
+Views:
+
+* Week view (default)
+* Day view
+
+Each appointment block:
+
+* Nome
+* Serviço
+* Hora
+
+Click event:
+→ open modal with full details
+
+Color-coded events
+
+---
+
+📋 APPOINTMENT TABLE
+
+Columns:
+
+* Cliente
+* Serviço
+* Data
+* Hora
+* Telefone
+* Valor
+* Status
+
+Actions:
+
+* Delete
+* Mark as completed
+
+---
+
+💰 FINANCIAL
+
+Auto calculate:
+
+* Total do dia
+* Total do mês
+
+Charts:
+
+* Line chart (revenue)
+* Bar chart (services)
+
+---
+
+⚙️ BACKEND
+
+Node.js + Express
+
+Routes:
+
+* POST /appointments
+* GET /appointments
+* DELETE /appointments
+
+---
+
+🗄️ DATABASE
+
+SQLite:
+
+Fields:
+
+* id
+* name
+* phone
+* service
+* date
+* time
+* price
+* status
+
+---
+
+💻 FRONTEND
+
+* React + Vite
+* TailwindCSS
+* Framer Motion
+* FullCalendar
+* Recharts
+
+---
+
+✨ FINAL GOAL
+
+This must feel like:
+
+* Premium SaaS
+* Modern barber system
+* Beautiful and professional
+
+⚠️ DO NOT make it basic
+⚠️ DO NOT simplify design
+
+Make it IMPRESSIVE
