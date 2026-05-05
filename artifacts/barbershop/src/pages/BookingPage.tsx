@@ -23,6 +23,33 @@ const WEEKDAYS = [
   { value: "6", label: "Sábado" },
 ];
 
+function getMaxDate(): string {
+  const now = new Date();
+  const max = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  return max.toISOString().split("T")[0];
+}
+
+function generate30minSlots(openHour: number, closeHour: number): string[] {
+  const slots: string[] = [];
+  let current = openHour * 60;
+  while (current + 30 <= closeHour * 60) {
+    const h = Math.floor(current / 60).toString().padStart(2, "0");
+    const m = (current % 60).toString().padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    current += 30;
+  }
+  return slots;
+}
+
+const WEEKDAY_SLOTS: Record<string, string[]> = {
+  "0": generate30minSlots(7, 14),  // Sunday: 07:00–13:30
+  "2": generate30minSlots(7, 20),  // Tue
+  "3": generate30minSlots(7, 20),  // Wed
+  "4": generate30minSlots(7, 20),  // Thu
+  "5": generate30minSlots(7, 20),  // Fri
+  "6": generate30minSlots(7, 20),  // Sat
+};
+
 const PERIOD_OPTIONS = [
   { value: "this_month", label: "Este mês" },
   { value: "next_2_months", label: "Próximos 2 meses" },
@@ -295,6 +322,7 @@ export default function BookingPage() {
                           <Input
                             type="date"
                             min={new Date().toISOString().split("T")[0]}
+                            max={getMaxDate()}
                             value={date}
                             onChange={handleDateChange}
                             className="bg-input border-border h-12"
@@ -369,15 +397,22 @@ export default function BookingPage() {
                         {/* Horário */}
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-foreground">Horário fixo</label>
-                          <Input
-                            type="time"
+                          <Select
                             value={time}
-                            onChange={(e) => setTime(e.target.value)}
-                            min="07:00"
-                            max="19:30"
-                            className="bg-input border-border h-12"
-                            data-testid="input-recurring-time"
-                          />
+                            onValueChange={setTime}
+                            data-testid="select-recurring-time"
+                          >
+                            <SelectTrigger className="bg-input border-border h-12" data-testid="select-recurring-time">
+                              <SelectValue placeholder="Selecione o horário" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-border max-h-60 overflow-y-auto">
+                              {(WEEKDAY_SLOTS[weekday] ?? WEEKDAY_SLOTS["2"]).map((slot) => (
+                                <SelectItem key={slot} value={slot}>
+                                  {slot}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         {/* Período */}

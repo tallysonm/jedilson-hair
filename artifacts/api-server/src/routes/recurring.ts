@@ -20,6 +20,12 @@ function getOpeningHours(dateStr: string): { open: number; close: number } | nul
   return { open: 7, close: 20 }; // Tue-Sat
 }
 
+function getMaxAllowedDate(): string {
+  const now = new Date();
+  const max = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  return max.toISOString().split("T")[0];
+}
+
 function generateRecurringDates(
   weekday: number,
   period: "this_month" | "next_2_months",
@@ -27,6 +33,8 @@ function generateRecurringDates(
 ): string[] {
   const ref = new Date(startDate + "T12:00:00");
   const dates: string[] = [];
+  const today = new Date().toISOString().split("T")[0];
+  const maxDate = getMaxAllowedDate();
 
   // Determine month range
   const months: Array<{ year: number; month: number }> = [];
@@ -44,9 +52,7 @@ function generateRecurringDates(
       const candidate = new Date(year, month, day);
       if (candidate.getDay() === weekday) {
         const iso = candidate.toISOString().split("T")[0];
-        // Skip dates in the past
-        const today = new Date().toISOString().split("T")[0];
-        if (iso >= today) {
+        if (iso >= today && iso <= maxDate) {
           dates.push(iso);
         }
       }

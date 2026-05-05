@@ -144,6 +144,12 @@ router.get("/", async (req, res) => {
   })));
 });
 
+function getMaxAllowedDate(): string {
+  const now = new Date();
+  const max = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+  return max.toISOString().split("T")[0];
+}
+
 router.post("/", async (req, res) => {
   const parsed = CreateAppointmentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -151,6 +157,11 @@ router.post("/", async (req, res) => {
     return;
   }
   const { clientName, clientPhone, serviceId, date, time } = parsed.data;
+
+  if (date > getMaxAllowedDate()) {
+    res.status(400).json({ error: "Data indisponível para agendamento" });
+    return;
+  }
 
   const service = SERVICES.find(s => s.id === serviceId);
   if (!service) {

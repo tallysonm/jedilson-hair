@@ -737,7 +737,12 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
             <Input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              max={(() => {
+                const now = new Date();
+                return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString().split("T")[0];
+              })()}
+              onChange={(e) => { setDate(e.target.value); setTime(""); }}
               className="bg-input border-border h-12"
               required
               data-testid="input-new-date"

@@ -1,0 +1,158 @@
+---
+
+⏱️ FIXED TIME SLOT SYSTEM (30 MINUTES ONLY)
+
+The system must ONLY allow fixed time slots of 30 minutes.
+
+Allowed times example:
+07:00
+07:30
+08:00
+08:30
+09:00
+...
+
+NOT allowed:
+❌ 10:02
+❌ 10:17
+❌ 10:45 (if not aligned to 30min grid)
+
+---
+
+📌 FRONTEND TIME SELECTION
+
+* Replace free time input with SELECT or buttons
+* Show only valid 30-min slots
+* Auto-update based on availability
+
+---
+
+🧠 SLOT GENERATION
+
+* Generate time slots every 30 minutes within working hours
+* Example:
+  07:00 → 20:00
+
+---
+
+🚫 APPLY SMART BLOCKING
+
+* Remove slots that overlap with existing appointments
+* Respect:
+
+  * service duration
+  * cleaning buffer (10min)
+
+---
+
+🔐 ADMIN - NEW APPOINTMENT (UPDATED)
+
+Inside admin panel:
+
+Add button:
+👉 "Novo Agendamento"
+
+Form must include:
+
+* Nome
+* Telefone
+* Serviço
+* Data
+* Horário (30min slots)
+
+---
+
+🔁 ADMIN RECURRING OPTION (IMPORTANT)
+
+Inside "Novo Agendamento":
+
+Add:
+
+"Agendamento recorrente?"
+
+Options:
+
+* Não
+* Sim
+
+If "Sim", show:
+
+* Tipo:
+
+  * Semanal (fixo)
+
+* Dia da semana
+
+* Horário
+
+* Duração:
+
+  * Este mês
+  * Próximos 2 meses
+
+---
+
+🧠 ADMIN RECURRING LOGIC
+
+* Generate appointments automatically
+* Follow same rules:
+
+  * 30min slots
+  * smart blocking
+  * no overlap
+
+---
+
+📅 BOOKING WINDOW LIMIT (FIXED)
+
+The system must ONLY allow bookings within 3 months.
+
+Example:
+If today is May:
+
+Allowed:
+✔ May
+✔ June
+✔ July
+
+NOT allowed:
+❌ August or beyond
+
+---
+
+📌 DATE PICKER (CLIENT + ADMIN)
+
+* Disable dates beyond 3 months
+* Prevent navigation to future months
+* User cannot select invalid dates
+
+---
+
+🛑 BACKEND VALIDATION
+
+Before saving ANY appointment:
+
+1. Check if date ≤ today + 3 months
+2. If not:
+
+Return:
+"Data indisponível para agendamento"
+
+---
+
+🔁 RECURRING + LIMIT INTEGRATION
+
+* Recurring appointments must ALSO respect 3-month limit
+* Stop generating when reaching max date
+
+---
+
+🎯 FINAL RESULT
+
+* Only valid 30-min time slots
+* No broken times
+* Recurring works for both client and admin
+* Clean 3-month schedule limit
+* Fully professional behavior
+
+---
