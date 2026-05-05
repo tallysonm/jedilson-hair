@@ -1,0 +1,279 @@
+Build an EXTREMELY PREMIUM SaaS-style barbershop scheduling application.
+
+⚠️ RULES:
+
+* Code MUST be in English
+* UI MUST be in Brazilian Portuguese
+* Premium, elegant, modern UI (high-end SaaS)
+* Client experience must be SIMPLE
+* Admin experience must be POWERFUL
+
+---
+
+🏪 BUSINESS
+
+Name: Jedilson Hair
+Phone: (11) 97343-6623
+Location: Osasco - SP
+
+---
+
+🎨 DESIGN
+
+* Dark background (#0D0D0D)
+
+* Blue (#1D3557)
+
+* Red (#E63946)
+
+* White text
+
+* Small logo on top-left (no banner)
+
+* Glassmorphism cards
+
+* Smooth animations
+
+* Rounded corners
+
+* Clean spacing
+
+---
+
+👤 CLIENT PAGE (SIMPLE)
+
+Top:
+
+* Small logo
+* "Jedilson Hair"
+* Button "Área do Administrador"
+
+Center card:
+
+Title:
+"Agende seu horário"
+
+Fields:
+
+* Nome
+* Telefone
+* Serviço (dropdown)
+* Data
+* Horário
+
+Button:
+"Confirmar Agendamento"
+
+After booking:
+"Agendamento confirmado com sucesso!"
+
+---
+
+📲 WHATSAPP
+
+Generate message:
+
+"Novo agendamento:
+Cliente: {name}
+Serviço: {service}
+Data: {date}
+Hora: {time}"
+
+Button:
+https://wa.me/5511973436623?text=ENCODED_MESSAGE
+
+---
+
+🔐 ADMIN LOGIN
+
+Button:
+"Área do Administrador"
+
+Login:
+
+* user: admin
+* password: 1234
+
+---
+
+📊 ADMIN DASHBOARD
+
+Show:
+
+* Faturamento do dia
+* Faturamento do mês
+* Total de agendamentos
+
+---
+
+📅 CALENDAR (FULLCALENDAR)
+
+* Week view
+* Day view
+* Appointment blocks
+
+Each block:
+
+* Nome
+* Serviço
+* Hora
+
+Click → open details modal
+
+---
+
+📋 TABLE
+
+Columns:
+
+* Cliente
+* Serviço
+* Data
+* Hora
+* Telefone
+* Valor
+* Status
+
+Actions:
+
+* Delete
+* Complete
+
+---
+
+💰 FINANCIAL
+
+Auto calculate:
+
+* Daily revenue
+* Monthly revenue
+
+Charts:
+
+* Revenue (line)
+* Services (bar)
+
+---
+
+🧠 SMART SCHEDULING SYSTEM (CRITICAL)
+
+Each service has:
+
+* name
+* price
+* duration (minutes)
+
+Example:
+Corte simples → 30min
+Corte + barba → 50min
+
+---
+
+⏱️ TIME SYSTEM
+
+* Slots every 30 minutes
+
+---
+
+🧼 CLEANING BUFFER
+
+Add 10 minutes buffer after each appointment.
+
+Example:
+Service = 50min
+Total blocked = 60min
+
+---
+
+🚫 BLOCKING RULE
+
+For each appointment:
+
+start = appointment time
+end = start + duration + buffer
+
+Remove ALL overlapping slots
+
+---
+
+📐 OVERLAP FORMULA
+
+newStart < existingEnd
+AND
+newEnd > existingStart
+
+→ BLOCK
+
+---
+
+🛑 BACKEND VALIDATION
+
+Before saving:
+
+* Calculate newEnd
+* Check all appointments same day
+* If overlap exists:
+
+Return:
+"Horário indisponível"
+
+---
+
+⚡ FRONTEND
+
+When user selects:
+
+* service → get duration
+* date → load appointments
+* show ONLY valid times
+
+---
+
+🗄️ DATABASE (SQLite)
+
+Fields:
+
+* id
+* name
+* phone
+* service
+* date
+* time
+* duration
+* price
+* status
+
+---
+
+⚙️ BACKEND
+
+Node.js + Express
+
+Routes:
+
+* POST /appointments
+* GET /appointments
+* DELETE /appointments
+
+---
+
+💻 FRONTEND
+
+* React + Vite
+* TailwindCSS
+* Framer Motion
+* FullCalendar
+* Recharts
+
+---
+
+✨ FINAL GOAL
+
+* No double booking
+* Smart blocking
+* Beautiful UI
+* Professional system
+* Ready to sell
+
+Make it LOOK EXPENSIVE.
+Make it FEEL PROFESSIONAL.

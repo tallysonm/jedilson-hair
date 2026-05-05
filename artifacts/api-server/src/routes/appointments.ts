@@ -10,7 +10,7 @@ import {
   DeleteAppointmentParams,
   GetAvailableSlotsQueryParams,
 } from "@workspace/api-zod";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { SERVICES } from "./services";
 
 const router = Router();
@@ -35,14 +35,25 @@ function getDateRange(period: string) {
   return null;
 }
 
+const BUFFER_MINUTES = 10;
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(total: number): string {
+  const h = Math.floor(total / 60).toString().padStart(2, "0");
+  const m = (total % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 function generateTimeSlots(openHour: number, closeHour: number, durationMinutes: number): string[] {
   const slots: string[] = [];
   let current = openHour * 60;
   const close = closeHour * 60;
-  while (current + durationMinutes <= close) {
-    const h = Math.floor(current / 60).toString().padStart(2, "0");
-    const m = (current % 60).toString().padStart(2, "0");
-    slots.push(`${h}:${m}`);
+  while (current + durationMinutes + BUFFER_MINUTES <= close) {
+    slots.push(minutesToTime(current));
     current += 30;
   }
   return slots;
@@ -79,30 +90,20 @@ router.get("/available-slots", async (req, res) => {
     .from(appointmentsTable)
     .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")));
 
-  const bookedTimes = new Set<string>();
-  for (const b of booked) {
-    const bookedService = SERVICES.find(s => s.id === b.serviceId);
-    const bookedDuration = bookedService ? bookedService.durationMinutes : 30;
-    const [bh, bm] = b.time.split(":").map(Number);
-    const startMin = bh * 60 + bm;
-    for (let i = 0; i < bookedDuration; i++) {
-      const t = startMin + i;
-      const th = Math.floor(t / 60).toString().padStart(2, "0");
-      const tm = (t % 60).toString().padStart(2, "0");
-      bookedTimes.add(`${th}:${tm}`);
-    }
-  }
+  // Build list of [existingStart, existingEnd] windows (duration + buffer)
+  const bookedWindows = booked.map(b => {
+    const existingService = SERVICES.find(s => s.id === b.serviceId);
+    const existingDuration = existingService ? existingService.durationMinutes : 30;
+    const start = timeToMinutes(b.time);
+    const end = start + existingDuration + BUFFER_MINUTES;
+    return { start, end };
+  });
 
+  // A slot is available only if [slotStart, slotStart+duration+buffer) does not overlap any booked window
   const available = allSlots.filter(slot => {
-    const [sh, sm] = slot.split(":").map(Number);
-    const startMin = sh * 60 + sm;
-    for (let i = 0; i < duration; i++) {
-      const t = startMin + i;
-      const th = Math.floor(t / 60).toString().padStart(2, "0");
-      const tm = (t % 60).toString().padStart(2, "0");
-      if (bookedTimes.has(`${th}:${tm}`)) return false;
-    }
-    return true;
+    const slotStart = timeToMinutes(slot);
+    const slotEnd = slotStart + duration + BUFFER_MINUTES;
+    return !bookedWindows.some(w => slotStart < w.end && slotEnd > w.start);
   });
 
   res.json({ date, slots: available });
@@ -157,13 +158,25 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const existing = await db
-    .select()
-    .from(appointmentsTable)
-    .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.time, time), eq(appointmentsTable.status, "pending")));
+  // Overlap check: newStart < existingEnd AND newEnd > existingStart
+  const newStart = timeToMinutes(time);
+  const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
 
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Este horário já está reservado" });
+  const sameDayPending = await db
+    .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")));
+
+  const hasOverlap = sameDayPending.some(b => {
+    const existingService = SERVICES.find(s => s.id === b.serviceId);
+    const existingDuration = existingService ? existingService.durationMinutes : 30;
+    const existingStart = timeToMinutes(b.time);
+    const existingEnd = existingStart + existingDuration + BUFFER_MINUTES;
+    return newStart < existingEnd && newEnd > existingStart;
+  });
+
+  if (hasOverlap) {
+    res.status(409).json({ error: "Horário indisponível" });
     return;
   }
 
