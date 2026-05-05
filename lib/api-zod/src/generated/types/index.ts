@@ -9,7 +9,9 @@
 export * from "./appointment";
 export * from "./appointmentStatus";
 export * from "./availableSlots";
+export * from "./barber";
 export * from "./createAppointmentBody";
+export * from "./createBarberBody";
 export * from "./createRecurringAppointmentBody";
 export * from "./createRecurringAppointmentBodyPeriod";
 export * from "./dashboardSummary";
@@ -27,3 +29,4 @@ export * from "./service";
 export * from "./servicesChartEntry";
 export * from "./updateAppointmentBody";
 export * from "./updateAppointmentBodyStatus";
+export * from "./updateBarberBody";

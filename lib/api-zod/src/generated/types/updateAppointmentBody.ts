@@ -14,4 +14,5 @@ export interface UpdateAppointmentBody {
   serviceId?: string;
   date?: string;
   time?: string;
+  barberId?: string | null;
 }

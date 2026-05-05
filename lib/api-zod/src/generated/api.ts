@@ -28,6 +28,47 @@ export const ListServicesResponseItem = zod.object({
 export const ListServicesResponse = zod.array(ListServicesResponseItem);
 
 /**
+ * @summary List all barbers
+ */
+export const ListBarbersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  photo: zod.string().nullish(),
+  active: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListBarbersResponse = zod.array(ListBarbersResponseItem);
+
+/**
+ * @summary Create a new barber
+ */
+export const CreateBarberBody = zod.object({
+  name: zod.string(),
+  photo: zod.string().nullish(),
+});
+
+/**
+ * @summary Update a barber
+ */
+export const UpdateBarberParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateBarberBody = zod.object({
+  name: zod.string().optional(),
+  photo: zod.string().nullish(),
+  active: zod.boolean().optional(),
+});
+
+export const UpdateBarberResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  photo: zod.string().nullish(),
+  active: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary List appointments with optional filters
  */
 export const ListAppointmentsQueryParams = zod.object({
@@ -40,6 +81,7 @@ export const ListAppointmentsQueryParams = zod.object({
     .optional()
     .describe("Filter by period"),
   status: zod.enum(["pending", "completed", "cancelled"]).optional(),
+  barberId: zod.coerce.string().optional().describe("Filter by barber ID"),
 });
 
 export const ListAppointmentsResponseItem = zod.object({
@@ -52,6 +94,7 @@ export const ListAppointmentsResponseItem = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
   recurrenceGroupId: zod.string().nullish(),
@@ -68,6 +111,7 @@ export const CreateAppointmentBody = zod.object({
   serviceId: zod.string(),
   date: zod.string(),
   time: zod.string(),
+  barberId: zod.string().nullish(),
 });
 
 /**
@@ -76,6 +120,10 @@ export const CreateAppointmentBody = zod.object({
 export const GetAvailableSlotsQueryParams = zod.object({
   date: zod.coerce.string().describe("Date in YYYY-MM-DD format"),
   serviceId: zod.coerce.string().describe("Service ID to check duration"),
+  barberId: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter conflicts for a specific barber"),
 });
 
 export const GetAvailableSlotsResponse = zod.object({
@@ -98,6 +146,7 @@ export const CreateRecurringAppointmentsBody = zod.object({
   startDate: zod
     .string()
     .describe("Reference date to determine current month (YYYY-MM-DD)"),
+  barberId: zod.string().nullish(),
 });
 
 /**
@@ -124,6 +173,7 @@ export const GetAppointmentResponse = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
   recurrenceGroupId: zod.string().nullish(),
@@ -144,6 +194,7 @@ export const UpdateAppointmentBody = zod.object({
   serviceId: zod.string().optional(),
   date: zod.string().optional(),
   time: zod.string().optional(),
+  barberId: zod.string().nullish(),
 });
 
 export const UpdateAppointmentResponse = zod.object({
@@ -156,6 +207,7 @@ export const UpdateAppointmentResponse = zod.object({
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
   recurrenceGroupId: zod.string().nullish(),

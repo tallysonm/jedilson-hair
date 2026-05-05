@@ -18,4 +18,8 @@ export type ListAppointmentsParams = {
    */
   period?: ListAppointmentsPeriod;
   status?: ListAppointmentsStatus;
+  /**
+   * Filter by barber ID
+   */
+  barberId?: string;
 };

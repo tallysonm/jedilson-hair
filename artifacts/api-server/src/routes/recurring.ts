@@ -67,7 +67,7 @@ function generateGroupId(): string {
 }
 
 router.post("/", async (req, res) => {
-  const { clientName, clientPhone, serviceId, time, weekday, period, startDate } = req.body as {
+  const { clientName, clientPhone, serviceId, time, weekday, period, startDate, barberId } = req.body as {
     clientName: string;
     clientPhone: string;
     serviceId: string;
@@ -75,6 +75,7 @@ router.post("/", async (req, res) => {
     weekday: number;
     period: "this_month" | "next_2_months";
     startDate: string;
+    barberId?: string | null;
   };
 
   if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !period || !startDate) {
@@ -120,11 +121,14 @@ router.post("/", async (req, res) => {
       continue;
     }
 
-    // Overlap check for this date
+    // Overlap check for this date (per barber if barberId given)
+    const overlapConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+    if (barberId) overlapConditions.push(eq(appointmentsTable.barberId, barberId));
+
     const sameDayPending = await db
       .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
       .from(appointmentsTable)
-      .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")));
+      .where(and(...overlapConditions));
 
     const hasOverlap = sameDayPending.some((b) => {
       const existingService = SERVICES.find((s) => s.id === b.serviceId);
@@ -149,6 +153,7 @@ router.post("/", async (req, res) => {
         servicePrice: service.price.toString(),
         date,
         time,
+        barberId: barberId ?? null,
         status: "pending",
         isRecurring: true,
         recurrenceType: "monthly_weekly",

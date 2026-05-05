@@ -11,6 +11,8 @@ import {
   getGetAvailableSlotsQueryKey,
   useCreateAppointment,
   useCreateRecurringAppointments,
+  useListBarbers,
+  getListBarbersQueryKey,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -66,6 +68,7 @@ export default function BookingPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [serviceId, setServiceId] = useState("");
+  const [barberId, setBarberId] = useState("all");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
@@ -75,13 +78,15 @@ export default function BookingPage() {
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
 
   const { data: services = [] } = useListServices();
+  const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
 
+  const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(
-    { date, serviceId },
+    slotParams,
     {
       query: {
         enabled: !isRecurring && !!date && !!serviceId,
-        queryKey: getGetAvailableSlotsQueryKey({ date, serviceId }),
+        queryKey: getGetAvailableSlotsQueryKey(slotParams),
       },
     }
   );
@@ -107,7 +112,7 @@ export default function BookingPage() {
     if (!name || !phone || !serviceId || !date || !time) return;
     const service = services.find((s) => s.id === serviceId);
     createMutation.mutate(
-      { data: { serviceId, date, time, clientName: name, clientPhone: phone } },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null } },
       {
         onSuccess: () => {
           setSuccessData({
@@ -141,6 +146,7 @@ export default function BookingPage() {
           weekday: parseInt(weekday, 10),
           period,
           startDate,
+          barberId: barberId !== "all" ? barberId : null,
         },
       },
       {
@@ -174,6 +180,7 @@ export default function BookingPage() {
     setName("");
     setPhone("");
     setServiceId("");
+    setBarberId("all");
     setDate("");
     setTime("");
     setIsRecurring(false);
@@ -281,6 +288,24 @@ export default function BookingPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Barbeiro */}
+                  {barbers.filter((b) => b.active).length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">Barbeiro (opcional)</label>
+                      <Select value={barberId} onValueChange={setBarberId}>
+                        <SelectTrigger className="bg-input border-border h-12" data-testid="select-barber">
+                          <SelectValue placeholder="Qualquer barbeiro" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          <SelectItem value="all">Qualquer barbeiro</SelectItem>
+                          {barbers.filter((b) => b.active).map((b) => (
+                            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Recurring toggle */}
                   <div className="space-y-2">

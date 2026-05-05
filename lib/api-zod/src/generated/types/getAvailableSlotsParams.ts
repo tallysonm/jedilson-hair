@@ -15,4 +15,8 @@ export type GetAvailableSlotsParams = {
    * Service ID to check duration
    */
   serviceId: string;
+  /**
+   * Filter conflicts for a specific barber
+   */
+  barberId?: string;
 };

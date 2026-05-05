@@ -17,4 +17,5 @@ export interface CreateRecurringAppointmentBody {
   period: CreateRecurringAppointmentBodyPeriod;
   /** Reference date to determine current month (YYYY-MM-DD) */
   startDate: string;
+  barberId?: string | null;
 }

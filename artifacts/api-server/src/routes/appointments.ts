@@ -74,6 +74,8 @@ router.get("/available-slots", async (req, res) => {
     return;
   }
   const { date, serviceId } = parsed.data;
+  const barberId = typeof req.query["barberId"] === "string" ? req.query["barberId"] : undefined;
+
   const hours = getOpeningHours(date);
   if (!hours) {
     res.json({ date, slots: [] });
@@ -85,12 +87,14 @@ router.get("/available-slots", async (req, res) => {
 
   const allSlots = generateTimeSlots(hours.open, hours.close, duration);
 
+  const baseConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+  if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
+
   const booked = await db
     .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
     .from(appointmentsTable)
-    .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")));
+    .where(and(...baseConditions));
 
-  // Build list of [existingStart, existingEnd] windows (duration + buffer)
   const bookedWindows = booked.map(b => {
     const existingService = SERVICES.find(s => s.id === b.serviceId);
     const existingDuration = existingService ? existingService.durationMinutes : 30;
@@ -99,7 +103,6 @@ router.get("/available-slots", async (req, res) => {
     return { start, end };
   });
 
-  // A slot is available only if [slotStart, slotStart+duration+buffer) does not overlap any booked window
   const available = allSlots.filter(slot => {
     const slotStart = timeToMinutes(slot);
     const slotEnd = slotStart + duration + BUFFER_MINUTES;
@@ -116,8 +119,9 @@ router.get("/", async (req, res) => {
     return;
   }
   const { date, period, status } = parsed.data;
+  const barberId = typeof req.query["barberId"] === "string" ? req.query["barberId"] : undefined;
 
-  let conditions = [];
+  const conditions = [];
 
   if (date) {
     conditions.push(eq(appointmentsTable.date, date));
@@ -131,6 +135,10 @@ router.get("/", async (req, res) => {
 
   if (status) {
     conditions.push(eq(appointmentsTable.status, status));
+  }
+
+  if (barberId) {
+    conditions.push(eq(appointmentsTable.barberId, barberId));
   }
 
   const rows = conditions.length > 0
@@ -191,6 +199,10 @@ router.post("/", async (req, res) => {
     return;
   }
 
+  const barberId = typeof (req.body as Record<string, unknown>)["barberId"] === "string"
+    ? (req.body as Record<string, unknown>)["barberId"] as string
+    : null;
+
   const [created] = await db.insert(appointmentsTable).values({
     clientName,
     clientPhone,
@@ -199,6 +211,7 @@ router.post("/", async (req, res) => {
     servicePrice: service.price.toString(),
     date,
     time,
+    barberId,
     status: "pending",
   }).returning();
 

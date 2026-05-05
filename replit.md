@@ -29,18 +29,28 @@ pnpm workspace monorepo using TypeScript. Full-stack appointment scheduling app 
 
 ### `artifacts/barbershop` — Gedilson Rai Barbershop (preview `/`)
 React + Vite frontend. Three pages:
-- `/` — Public booking page (5-step flow: service → date → time → info → confirmation)
+- `/` — Public booking page (client fills name, phone, picks service, barber (optional), date/time; supports single and recurring appointments)
 - `/admin` — Admin login (admin / 1234)
-- `/admin/dashboard` — Protected admin dashboard (KPI cards, revenue chart, services bar chart, agenda, appointments table, new appointment form)
+- `/admin/dashboard` — Protected admin dashboard with tabs:
+  - **Visão Geral** — KPI cards, revenue chart, services bar chart
+  - **Calendário** — FullCalendar week/day view with per-barber filter
+  - **Agendamentos** — Table with period + barber filters; shows Barbeiro column
+  - **Novo Agendamento** — Create appointment with barber selector
+  - **Barbeiros** — Manage barbers: add, rename, activate/deactivate
 
 Design system: dark (#0A0A0A bg), red (#C1121F primary), gold (#D4AF37 accent), glassmorphism cards, Inter font.
 
 ### `artifacts/api-server` — API Server (preview `/api`)
 Express backend serving all routes under `/api`:
 - `GET /api/services` — static list of 15 services
-- `GET/POST /api/appointments` — list/create appointments
-- `GET /api/appointments/available-slots` — available time slots (conflict-aware)
+- `GET /api/barbers` — list all barbers (seeds 3 defaults on startup: Jedilson, Barbeiro 2, Barbeiro 3)
+- `POST /api/barbers` — create a barber
+- `PATCH /api/barbers/:id` — update barber (name, photo, active)
+- `GET/POST /api/appointments` — list/create appointments (supports `barberId` filter)
+- `GET /api/appointments/available-slots` — available time slots (conflict-aware, per-barber if `barberId` given)
 - `PATCH/DELETE /api/appointments/:id` — update/delete appointment
+- `POST /api/appointments/recurring` — create recurring weekly appointments (supports `barberId`)
+- `DELETE /api/appointments/group/:groupId` — delete entire recurrence group
 - `POST /api/auth/login` — admin login (hardcoded: admin/1234)
 - `GET /api/dashboard/summary` — KPI summary
 - `GET /api/dashboard/revenue-chart` — 30-day revenue data
@@ -49,7 +59,8 @@ Express backend serving all routes under `/api`:
 ## Database
 
 PostgreSQL via `@workspace/db`. Tables:
-- `appointments` — client bookings with service info, date/time, status (pending/completed/cancelled)
+- `appointments` — client bookings with service info, date/time, status (pending/completed/cancelled), optional `barberId`
+- `barbers` — barber profiles (id, name, photo, active, createdAt)
 
 ## Business Info
 
@@ -58,6 +69,25 @@ PostgreSQL via `@workspace/db`. Tables:
 - **Phone**: (11) 97343-6623
 - **Hours**: Ter–Sáb 07:00–20:00 | Dom 07:00–14:00 | Seg: Fechado
 - **Admin credentials**: admin / 1234
+
+## Feature Notes
+
+### Multi-barber support
+- `barberId` is nullable on appointments — existing data without a barber is preserved
+- Available-slots conflict checking is per-barber when `barberId` is provided
+- Default barbers seeded on server start if table is empty
+- Clients can optionally pick a barber or leave "Qualquer barbeiro"
+- Admin can filter calendar and appointments list by barber
+
+### 30-min slot enforcement + 3-month booking window
+- All time slots are generated in 30-min increments
+- Backend validates booking date is within 3 months from today (400 if exceeded)
+- Frontend `max` attribute on date inputs enforces the same window
+
+### Recurring appointments
+- Admin and clients can create weekly recurring appointments for "this month" or "next 2 months"
+- Conflicts are skipped (not rejected); result includes `created` and `skipped` arrays
+- Group delete removes all appointments sharing a `recurrenceGroupId`
 
 ## Notes on api-zod index.ts
 

@@ -17,6 +17,7 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  barberId?: string | null;
   isRecurring: boolean;
   recurrenceType?: string | null;
   recurrenceGroupId?: string | null;

@@ -1,0 +1,188 @@
+---
+
+👨‍🔧 MULTI BARBERS SYSTEM (ADVANCED FEATURE)
+
+The system must support multiple barbers.
+
+---
+
+📌 BARBER STRUCTURE
+
+Create a barber entity:
+
+Fields:
+
+* id
+* name
+* photo (URL)
+* active
+
+---
+
+🧑‍💼 ADMIN PANEL - BARBER SELECTOR
+
+At the top of dashboard:
+
+Add a selector:
+
+👉 "Selecionar barbeiro"
+
+Options:
+
+* Barbeiro 1
+* Barbeiro 2
+* Barbeiro 3
+
+---
+
+📅 CALENDAR FILTER
+
+* When a barber is selected:
+  → Show ONLY that barber’s appointments
+* Each barber has their OWN schedule
+
+---
+
+📋 APPOINTMENTS LINKED TO BARBER
+
+Each appointment MUST include:
+
+* barberId
+
+---
+
+➕ ADD NEW BARBER
+
+Admin can:
+
+* Add barber
+* Upload photo
+* Edit name
+
+---
+
+🎯 RESULT
+
+* Each barber has separate schedule
+* Easy switching between barbers
+* Scalable system (multi professionals)
+
+---
+
+🔐 ADMIN - NEW APPOINTMENT (FINAL VERSION)
+
+Inside admin panel:
+
+Button:
+👉 "Novo Agendamento"
+
+Form MUST include:
+
+* Nome
+* Telefone
+* Serviço
+* Barbeiro (SELECT REQUIRED)
+* Data (max 3 months)
+* Horário (30min slots only)
+
+---
+
+🔁 ADMIN RECURRING (FIXED CLIENTS)
+
+Inside "Novo Agendamento":
+
+Add:
+
+"Agendamento recorrente?"
+
+Options:
+
+* Não
+* Sim
+
+If "Sim", show:
+
+* Tipo:
+
+  * Semanal fixo
+
+* Dia da semana
+
+* Horário
+
+* Duração:
+
+  * Este mês
+  * Próximos 2 meses
+
+---
+
+🧠 RECURRING LOGIC (ADMIN)
+
+When enabled:
+
+1. Get selected barber
+2. Generate appointments for that barber
+3. Follow rules:
+
+   * 30min slots
+   * smart blocking
+   * cleaning buffer
+   * 3-month limit
+
+---
+
+🚫 VALIDATION
+
+For EACH generated appointment:
+
+* Check:
+
+  * barberId (same barber conflict)
+  * overlap (time + duration)
+  * booking window
+
+If conflict:
+→ Skip or block
+
+---
+
+📅 CALENDAR DISPLAY (MULTI BARBER)
+
+Enhance calendar:
+
+OPTION 1 (RECOMMENDED):
+
+* Filter by selected barber
+
+OPTION 2 (ADVANCED):
+
+* Show columns per barber (side-by-side view)
+
+---
+
+🧾 DATABASE UPDATE
+
+Appointments table:
+
+Add:
+
+* barberId
+
+Barbers table:
+
+* id
+* name
+* photo
+
+---
+
+🎯 FINAL RESULT
+
+* Admin can create recurring appointments
+* Works same as client recurring
+* Each barber has own schedule
+* Fully scalable system
+* Professional barbershop management
+
+---

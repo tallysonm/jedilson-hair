@@ -18,6 +18,25 @@ export interface Service {
   durationLabel: string;
 }
 
+export interface Barber {
+  id: number;
+  name: string;
+  photo?: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreateBarberBody {
+  name: string;
+  photo?: string | null;
+}
+
+export interface UpdateBarberBody {
+  name?: string;
+  photo?: string | null;
+  active?: boolean;
+}
+
 export type AppointmentStatus =
   (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
 
@@ -37,6 +56,7 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  barberId?: string | null;
   isRecurring: boolean;
   recurrenceType?: string | null;
   recurrenceGroupId?: string | null;
@@ -49,6 +69,7 @@ export interface CreateAppointmentBody {
   serviceId: string;
   date: string;
   time: string;
+  barberId?: string | null;
 }
 
 export type UpdateAppointmentBodyStatus =
@@ -67,6 +88,7 @@ export interface UpdateAppointmentBody {
   serviceId?: string;
   date?: string;
   time?: string;
+  barberId?: string | null;
 }
 
 export interface AvailableSlots {
@@ -124,6 +146,7 @@ export interface CreateRecurringAppointmentBody {
   period: CreateRecurringAppointmentBodyPeriod;
   /** Reference date to determine current month (YYYY-MM-DD) */
   startDate: string;
+  barberId?: string | null;
 }
 
 export interface RecurringAppointmentResult {
@@ -147,6 +170,10 @@ export type ListAppointmentsParams = {
    */
   period?: ListAppointmentsPeriod;
   status?: ListAppointmentsStatus;
+  /**
+   * Filter by barber ID
+   */
+  barberId?: string;
 };
 
 export type ListAppointmentsPeriod =
@@ -176,4 +203,8 @@ export type GetAvailableSlotsParams = {
    * Service ID to check duration
    */
   serviceId: string;
+  /**
+   * Filter conflicts for a specific barber
+   */
+  barberId?: string;
 };

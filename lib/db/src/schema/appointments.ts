@@ -12,6 +12,7 @@ export const appointmentsTable = pgTable("appointments", {
   date: text("date").notNull(),
   time: text("time").notNull(),
   status: text("status", { enum: ["pending", "completed", "cancelled"] }).notNull().default("pending"),
+  barberId: text("barber_id"),
   isRecurring: boolean("is_recurring").notNull().default(false),
   recurrenceType: text("recurrence_type"),
   recurrenceGroupId: text("recurrence_group_id"),

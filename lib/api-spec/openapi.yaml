@@ -18,6 +18,8 @@ tags:
     description: Authentication
   - name: dashboard
     description: Admin dashboard data
+  - name: barbers
+    description: Barber management
 
 paths:
   /healthz:
@@ -48,6 +50,69 @@ paths:
                 items:
                   $ref: "#/components/schemas/Service"
 
+  /barbers:
+    get:
+      operationId: listBarbers
+      tags: [barbers]
+      summary: List all barbers
+      responses:
+        "200":
+          description: List of barbers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Barber"
+    post:
+      operationId: createBarber
+      tags: [barbers]
+      summary: Create a new barber
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBarberBody"
+      responses:
+        "201":
+          description: Barber created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+
+  /barbers/{id}:
+    patch:
+      operationId: updateBarber
+      tags: [barbers]
+      summary: Update a barber
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBarberBody"
+      responses:
+        "200":
+          description: Updated barber
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /appointments:
     get:
       operationId: listAppointments
@@ -70,6 +135,11 @@ paths:
           schema:
             type: string
             enum: [pending, completed, cancelled]
+        - in: query
+          name: barberId
+          schema:
+            type: string
+          description: Filter by barber ID
       responses:
         "200":
           description: List of appointments
@@ -121,6 +191,11 @@ paths:
           schema:
             type: string
           description: Service ID to check duration
+        - in: query
+          name: barberId
+          schema:
+            type: string
+          description: Filter conflicts for a specific barber
       responses:
         "200":
           description: List of available time slots
@@ -318,6 +393,43 @@ components:
           type: string
       required: [id, name, price, priceLabel, durationMinutes, durationLabel]
 
+    Barber:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, name, active, createdAt]
+
+    CreateBarberBody:
+      type: object
+      properties:
+        name:
+          type: string
+        photo:
+          type: string
+          nullable: true
+      required: [name]
+
+    UpdateBarberBody:
+      type: object
+      properties:
+        name:
+          type: string
+        photo:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+
     Appointment:
       type: object
       properties:
@@ -340,6 +452,9 @@ components:
         status:
           type: string
           enum: [pending, completed, cancelled]
+        barberId:
+          type: string
+          nullable: true
         isRecurring:
           type: boolean
         recurrenceType:
@@ -365,6 +480,9 @@ components:
           type: string
         time:
           type: string
+        barberId:
+          type: string
+          nullable: true
       required: [clientName, clientPhone, serviceId, date, time]
 
     UpdateAppointmentBody:
@@ -383,6 +501,9 @@ components:
           type: string
         time:
           type: string
+        barberId:
+          type: string
+          nullable: true
 
     AvailableSlots:
       type: object
@@ -474,6 +595,9 @@ components:
         startDate:
           type: string
           description: Reference date to determine current month (YYYY-MM-DD)
+        barberId:
+          type: string
+          nullable: true
       required: [clientName, clientPhone, serviceId, time, weekday, period, startDate]
 
     RecurringAppointmentResult:

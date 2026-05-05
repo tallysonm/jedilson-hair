@@ -11,6 +11,10 @@ import {
   TrendingUp,
   CalendarCheck,
   DollarSign,
+  Users,
+  Pencil,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import {
   useGetDashboardSummary,
@@ -28,6 +32,10 @@ import {
   useCreateAppointment,
   useGetAvailableSlots,
   getGetAvailableSlotsQueryKey,
+  useListBarbers,
+  getListBarbersQueryKey,
+  useCreateBarber,
+  useUpdateBarber,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -63,6 +71,7 @@ export default function AdminDashboardPage() {
     { id: "calendar", icon: CalendarDays, label: "Calendário" },
     { id: "appointments", icon: List, label: "Agendamentos" },
     { id: "new", icon: PlusCircle, label: "Novo Agendamento" },
+    { id: "barbers", icon: Users, label: "Barbeiros" },
   ];
 
   return (
@@ -108,6 +117,7 @@ export default function AdminDashboardPage() {
         {activeTab === "calendar" && <CalendarTab />}
         {activeTab === "appointments" && <AppointmentsTab />}
         {activeTab === "new" && <NewAppointmentTab onComplete={() => setActiveTab("appointments")} />}
+        {activeTab === "barbers" && <BarbeirosTab />}
       </main>
     </div>
   );
@@ -275,8 +285,12 @@ const CANCELLED_GRADIENT = "linear-gradient(135deg, #1c1c1c 0%, #4b5563 100%)";
 
 function CalendarTab() {
   const [selectedEvent, setSelectedEvent] = useState<Record<string, unknown> | null>(null);
+  const [barberId, setBarberId] = useState<string>("all");
   const qc = useQueryClient();
-  const { data: appointments = [] } = useListAppointments({}, { query: { queryKey: getListAppointmentsQueryKey({}) } });
+  const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
+
+  const params = barberId !== "all" ? { barberId } : {};
+  const { data: appointments = [] } = useListAppointments(params, { query: { queryKey: getListAppointmentsQueryKey(params) } });
 
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
@@ -324,7 +338,7 @@ function CalendarTab() {
       { id: selectedEvent.id as number, data: { status: "completed" } },
       {
         onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
+          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(params) });
           toast({ title: "Sucesso", description: "Agendamento concluído." });
           setSelectedEvent(null);
         },
@@ -338,7 +352,7 @@ function CalendarTab() {
       { id: selectedEvent.id as number },
       {
         onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey({}) });
+          qc.invalidateQueries({ queryKey: getListAppointmentsQueryKey(params) });
           toast({ title: "Sucesso", description: "Agendamento excluído." });
           setSelectedEvent(null);
         },
@@ -348,8 +362,21 @@ function CalendarTab() {
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto" style={{ height: "calc(100vh - 120px)" }}>
-      <h2 className="text-2xl font-bold text-white tracking-tight">Calendário</h2>
-      <div className="glass rounded-2xl p-5 overflow-hidden" style={{ height: "calc(100% - 52px)" }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold text-white tracking-tight">Calendário</h2>
+        <Select value={barberId} onValueChange={setBarberId}>
+          <SelectTrigger className="bg-input border-border h-9 w-48 text-sm">
+            <SelectValue placeholder="Todos os barbeiros" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="all">Todos os barbeiros</SelectItem>
+            {barbers.filter((b) => b.active).map((b) => (
+              <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="glass rounded-2xl p-5 overflow-hidden" style={{ height: "calc(100% - 72px)" }}>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -436,11 +463,13 @@ function CalendarTab() {
 
 function AppointmentsTab() {
   const [period, setPeriod] = useState<"day" | "week" | "month" | undefined>(undefined);
+  const [barberId, setBarberId] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; groupId: string | null; isRecurring: boolean } | null>(null);
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
 
-  const params = period ? { period } : {};
+  const params = { ...(period ? { period } : {}), ...(barberId !== "all" ? { barberId } : {}) };
   const { data: appointments = [] } = useListAppointments(params, {
     query: { queryKey: getListAppointmentsQueryKey(params) },
   });
@@ -495,21 +524,34 @@ function AppointmentsTab() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
         <h2 className="text-2xl font-bold text-white tracking-tight">Agendamentos</h2>
-        <div className="flex bg-card rounded-lg p-1 border border-border">
-          {filters.map((f) => (
-            <button
-              key={f.label}
-              onClick={() => setPeriod(f.value)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                period === f.value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-white"
-              }`}
-              data-testid={`filter-${f.value || "all"}`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex bg-card rounded-lg p-1 border border-border">
+            {filters.map((f) => (
+              <button
+                key={f.label}
+                onClick={() => setPeriod(f.value)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  period === f.value ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-white"
+                }`}
+                data-testid={`filter-${f.value || "all"}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <Select value={barberId} onValueChange={setBarberId}>
+            <SelectTrigger className="bg-input border-border h-9 w-44 text-sm">
+              <SelectValue placeholder="Todos os barbeiros" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">Todos os barbeiros</SelectItem>
+              {barbers.filter((b) => b.active).map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -521,6 +563,7 @@ function AppointmentsTab() {
                 <th className="px-6 py-4 font-medium">Cliente</th>
                 <th className="px-6 py-4 font-medium">Serviço</th>
                 <th className="px-6 py-4 font-medium">Data/Hora</th>
+                <th className="px-6 py-4 font-medium">Barbeiro</th>
                 <th className="px-6 py-4 font-medium">Valor</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Ações</th>
@@ -529,7 +572,7 @@ function AppointmentsTab() {
             <tbody>
               {appointments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground text-sm">
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground text-sm">
                     Nenhum agendamento encontrado.
                   </td>
                 </tr>
@@ -551,6 +594,11 @@ function AppointmentsTab() {
                     <td className="px-6 py-4">
                       <div className="text-sm text-white">{apt.date.split("-").reverse().join("/")}</div>
                       <div className="text-xs text-muted-foreground">{apt.time}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {apt.barberId
+                        ? barbers.find((b) => String(b.id) === apt.barberId)?.name ?? `#${apt.barberId}`
+                        : <span className="italic opacity-40">—</span>}
                     </td>
                     <td className="px-6 py-4 text-sm text-gold font-medium">R$ {Number(apt.servicePrice).toFixed(2)}</td>
                     <td className="px-6 py-4">
@@ -647,6 +695,7 @@ function AppointmentsTab() {
 
 function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
   const { data: services = [] } = useListServices();
+  const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
   const createMutation = useCreateAppointment();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -654,15 +703,17 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [serviceId, setServiceId] = useState("");
+  const [barberId, setBarberId] = useState("all");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
 
+  const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(
-    { date, serviceId },
+    slotParams,
     {
       query: {
         enabled: !!date && !!serviceId,
-        queryKey: getGetAvailableSlotsQueryKey({ date, serviceId }),
+        queryKey: getGetAvailableSlotsQueryKey(slotParams),
       },
     }
   );
@@ -672,7 +723,7 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
     if (!name || !phone || !serviceId || !date || !time) return;
 
     createMutation.mutate(
-      { data: { serviceId, date, time, clientName: name, clientPhone: phone } },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null } },
       {
         onSuccess: () => {
           toast({ title: "Sucesso", description: "Agendamento criado." });
@@ -726,6 +777,21 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
                 <SelectItem key={s.id} value={s.id}>
                   {s.name} — {s.priceLabel}
                 </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Barbeiro (opcional)</label>
+          <Select value={barberId} onValueChange={setBarberId}>
+            <SelectTrigger className="bg-input border-border h-12" data-testid="select-new-barber">
+              <SelectValue placeholder="Qualquer barbeiro" />
+            </SelectTrigger>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">Qualquer barbeiro</SelectItem>
+              {barbers.filter((b) => b.active).map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -791,6 +857,193 @@ function NewAppointmentTab({ onComplete }: { onComplete: () => void }) {
           {createMutation.isPending ? "Salvando..." : "Criar Agendamento"}
         </Button>
       </form>
+    </div>
+  );
+}
+
+function BarbeirosTab() {
+  const qc = useQueryClient();
+  const { data: barbers = [], isLoading } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
+  const createMutation = useCreateBarber();
+  const updateMutation = useUpdateBarber();
+  const { toast } = useToast();
+
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListBarbersQueryKey() });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    createMutation.mutate(
+      { data: { name: newName.trim() } },
+      {
+        onSuccess: () => {
+          toast({ title: "Sucesso", description: "Barbeiro adicionado." });
+          invalidate();
+          setNewName("");
+          setShowForm(false);
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Falha ao adicionar barbeiro.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleRename = (id: number) => {
+    if (!editName.trim()) return;
+    updateMutation.mutate(
+      { id, data: { name: editName.trim() } },
+      {
+        onSuccess: () => {
+          toast({ title: "Sucesso", description: "Nome atualizado." });
+          invalidate();
+          setEditId(null);
+        },
+      }
+    );
+  };
+
+  const handleToggleActive = (b: { id: number; active: boolean }) => {
+    updateMutation.mutate(
+      { id: b.id, data: { active: !b.active } },
+      {
+        onSuccess: () => {
+          toast({
+            title: b.active ? "Barbeiro desativado" : "Barbeiro ativado",
+            description: b.active ? "Barbeiro não aparecerá nas seleções." : "Barbeiro disponível para agendamentos.",
+          });
+          invalidate();
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white tracking-tight">Barbeiros</h2>
+        <Button
+          size="sm"
+          className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg gap-2"
+          onClick={() => setShowForm((v) => !v)}
+        >
+          <Users className="w-4 h-4" />
+          Adicionar
+        </Button>
+      </div>
+
+      {showForm && (
+        <motion.form
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          onSubmit={handleCreate}
+          className="glass rounded-xl p-5 flex gap-3 items-end"
+        >
+          <div className="flex-1 space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Nome do barbeiro</label>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Ex: João"
+              className="bg-input border-border h-11"
+              autoFocus
+            />
+          </div>
+          <Button
+            type="submit"
+            size="sm"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground h-11 px-6"
+            disabled={createMutation.isPending || !newName.trim()}
+          >
+            {createMutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="border-white/10 text-foreground hover:bg-white/5 h-11"
+            onClick={() => { setShowForm(false); setNewName(""); }}
+          >
+            Cancelar
+          </Button>
+        </motion.form>
+      )}
+
+      <div className="glass rounded-xl overflow-hidden">
+        {isLoading ? (
+          <div className="px-6 py-10 text-center text-muted-foreground text-sm">Carregando...</div>
+        ) : barbers.length === 0 ? (
+          <div className="px-6 py-10 text-center text-muted-foreground text-sm">Nenhum barbeiro cadastrado.</div>
+        ) : (
+          <ul className="divide-y divide-white/5">
+            {barbers.map((b) => (
+              <motion.li
+                key={b.id}
+                layout
+                className="flex items-center gap-4 px-6 py-4 hover:bg-white/3 transition-colors group"
+              >
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${b.active ? "bg-accent/15" : "bg-white/5"}`}>
+                  <Users className={`w-4 h-4 ${b.active ? "text-accent" : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  {editId === b.id ? (
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="bg-input border-border h-8 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") handleRename(b.id); if (e.key === "Escape") setEditId(null); }}
+                      />
+                      <Button size="sm" className="h-8 bg-accent/20 text-accent hover:bg-accent/30 border border-accent/30 text-xs" onClick={() => handleRename(b.id)}>
+                        OK
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setEditId(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium text-sm ${b.active ? "text-white" : "text-muted-foreground line-through"}`}>{b.name}</span>
+                      {!b.active && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-500/10 text-gray-500 border border-gray-500/20">
+                          INATIVO
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10"
+                    onClick={() => { setEditId(b.id); setEditName(b.name); }}
+                    title="Renomear"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={`h-8 w-8 ${b.active ? "text-yellow-500 hover:bg-yellow-500/10" : "text-green-500 hover:bg-green-500/10"}`}
+                    onClick={() => handleToggleActive(b)}
+                    title={b.active ? "Desativar" : "Ativar"}
+                    disabled={updateMutation.isPending}
+                  >
+                    {b.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
