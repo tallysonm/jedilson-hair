@@ -6,9 +6,9 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 const DEFAULT_BARBERS = [
-  { name: "Jedilson", photo: null, active: true },
-  { name: "Barbeiro 2", photo: null, active: true },
-  { name: "Barbeiro 3", photo: null, active: true },
+  { name: "Jedilson", photo: null, active: true, specialty: "Cortes & Barba" },
+  { name: "Barbeiro 2", photo: null, active: true, specialty: "Cortes Clássicos" },
+  { name: "Barbeiro 3", photo: null, active: true, specialty: "Penteados" },
 ];
 
 async function seedBarbers() {
@@ -20,22 +20,34 @@ async function seedBarbers() {
 
 seedBarbers().catch(() => {});
 
+function formatBarber(r: typeof barbersTable.$inferSelect) {
+  return {
+    ...r,
+    createdAt: r.createdAt.toISOString(),
+  };
+}
+
 router.get("/", async (_req, res) => {
   const rows = await db.select().from(barbersTable).orderBy(barbersTable.id);
-  res.json(rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+  res.json(rows.map(formatBarber));
 });
 
 router.post("/", async (req, res) => {
-  const { name, photo } = req.body as { name: string; photo?: string | null };
+  const { name, photo, phone, specialty } = req.body as {
+    name: string;
+    photo?: string | null;
+    phone?: string | null;
+    specialty?: string | null;
+  };
   if (!name) {
     res.status(400).json({ error: "Name is required" });
     return;
   }
   const [created] = await db
     .insert(barbersTable)
-    .values({ name, photo: photo ?? null, active: true })
+    .values({ name, photo: photo ?? null, phone: phone ?? null, specialty: specialty ?? null, active: true })
     .returning();
-  res.status(201).json({ ...created, createdAt: created.createdAt.toISOString() });
+  res.status(201).json(formatBarber(created));
 });
 
 router.patch("/:id", async (req, res) => {
@@ -44,11 +56,26 @@ router.patch("/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const { name, photo, active } = req.body as { name?: string; photo?: string | null; active?: boolean };
+  const { name, photo, phone, birthDate, bio, specialty, instagram, active } = req.body as {
+    name?: string;
+    photo?: string | null;
+    phone?: string | null;
+    birthDate?: string | null;
+    bio?: string | null;
+    specialty?: string | null;
+    instagram?: string | null;
+    active?: boolean;
+  };
+
   const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name;
-  if (photo !== undefined) updates.photo = photo;
-  if (active !== undefined) updates.active = active;
+  if (name      !== undefined) updates.name      = name;
+  if (photo     !== undefined) updates.photo     = photo;
+  if (phone     !== undefined) updates.phone     = phone;
+  if (birthDate !== undefined) updates.birthDate = birthDate;
+  if (bio       !== undefined) updates.bio       = bio;
+  if (specialty !== undefined) updates.specialty = specialty;
+  if (instagram !== undefined) updates.instagram = instagram;
+  if (active    !== undefined) updates.active    = active;
 
   const [updated] = await db
     .update(barbersTable)
@@ -60,7 +87,7 @@ router.patch("/:id", async (req, res) => {
     res.status(404).json({ error: "Barbeiro não encontrado" });
     return;
   }
-  res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
+  res.json(formatBarber(updated));
 });
 
 export default router;

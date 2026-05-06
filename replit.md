@@ -1,94 +1,84 @@
-# Workspace
+# Jedilson Hair — Barbershop Appointment App
 
-## Overview
+Full-stack appointment scheduling app for "Gedilson Rai Barbershop" / "Jedilson Hair" with a premium dark UI.
 
-pnpm workspace monorepo using TypeScript. Full-stack appointment scheduling app for "Gedilson Rai Barbershop".
+## Run & Operate
+
+- `pnpm run typecheck` — full typecheck (libs + leaf packages)
+- `pnpm run typecheck:libs` — build composite libs only
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks/Zod from OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- Required env: `DATABASE_URL`, `SESSION_SECRET`
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
+- **Frontend**: React 19 + Vite 7 + TailwindCSS v4 + shadcn/ui + Framer Motion + FullCalendar
+- **Backend**: Express 5 + Pino logging
 - **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-- **Frontend**: React + Vite + TailwindCSS v4 + shadcn/ui + Recharts
+- **Validation**: Zod v4 + drizzle-zod
+- **API codegen**: Orval (OpenAPI → React Query hooks + Zod schemas)
+- **Fonts**: Playfair Display (display) + Inter (body)
+- **Monorepo**: pnpm workspaces
 
-## Key Commands
+## Where things live
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `lib/db/src/schema/` — DB tables (barbers, appointments)
+- `lib/api-spec/openapi.yaml` — source of truth for all API contracts
+- `lib/api-client-react/src/generated/` — generated React Query hooks
+- `lib/api-zod/src/generated/` — generated Zod schemas; `index.ts` manually excludes conflicting exports
+- `artifacts/barbershop/src/` — React frontend (BookingPage, AdminDashboardPage, AdminLoginPage)
+- `artifacts/barbershop/src/components/Logo.tsx` — JedilsonLogo component
+- `artifacts/barbershop/src/index.css` — design tokens, glass utilities, FullCalendar overrides
+- `artifacts/api-server/src/routes/` — Express route handlers
 
-## Artifacts
+## Architecture decisions
 
-### `artifacts/barbershop` — Gedilson Rai Barbershop (preview `/`)
-React + Vite frontend. Three pages:
-- `/` — Public booking page (client fills name, phone, picks service, barber (optional), date/time; supports single and recurring appointments)
-- `/admin` — Admin login (admin / 1234)
-- `/admin/dashboard` — Protected admin dashboard with tabs:
-  - **Visão Geral** — KPI cards, revenue chart, services bar chart
-  - **Calendário** — FullCalendar week/day view with per-barber filter
-  - **Agendamentos** — Table with period + barber filters; shows Barbeiro column
-  - **Novo Agendamento** — Create appointment with barber selector
-  - **Barbeiros** — Manage barbers: add, rename, activate/deactivate
+- **Contract-first API**: All backend/frontend changes start with `openapi.yaml`, then codegen
+- **barberId nullable**: Appointments can have no barber; conflict-checking is per-barber when set
+- **30-min slots only**: Both frontend and backend enforce 30-minute booking increments
+- **3-month booking window**: Backend validates date is within 3 months; frontend enforces with `max` attribute
+- **api-zod/index.ts is manual**: After codegen, check for new types that conflict with Zod schema names in `generated/api.ts` and exclude them from index.ts (known conflicts: createAppointmentBody, updateAppointmentBody, loginBody, createBarberBody, updateBarberBody)
 
-Design system: deep black (#0A0A0A bg), red (#C1121F accent), gold (#C9A84C), glassmorphism cards, Playfair Display (headings) + Inter (body). Step-based booking wizard: service grid → barber cards → date/time pills → info + confirm. Admin: sidebar with animated nav indicator, Playfair headings, glass-card throughout, barber card grid.
+## Product
 
-### `artifacts/api-server` — API Server (preview `/api`)
-Express backend serving all routes under `/api`:
-- `GET /api/services` — static list of 15 services
-- `GET /api/barbers` — list all barbers (seeds 3 defaults on startup: Jedilson, Barbeiro 2, Barbeiro 3)
-- `POST /api/barbers` — create a barber
-- `PATCH /api/barbers/:id` — update barber (name, photo, active)
-- `GET/POST /api/appointments` — list/create appointments (supports `barberId` filter)
-- `GET /api/appointments/available-slots` — available time slots (conflict-aware, per-barber if `barberId` given)
-- `PATCH/DELETE /api/appointments/:id` — update/delete appointment
-- `POST /api/appointments/recurring` — create recurring weekly appointments (supports `barberId`)
-- `DELETE /api/appointments/group/:groupId` — delete entire recurrence group
-- `POST /api/auth/login` — admin login (hardcoded: admin/1234)
-- `GET /api/dashboard/summary` — KPI summary
-- `GET /api/dashboard/revenue-chart` — 30-day revenue data
-- `GET /api/dashboard/services-chart` — most sold services
-
-## Database
-
-PostgreSQL via `@workspace/db`. Tables:
-- `appointments` — client bookings with service info, date/time, status (pending/completed/cancelled), optional `barberId`
-- `barbers` — barber profiles (id, name, photo, active, createdAt)
+- **Booking page** (`/`): 4-step wizard (service → barber → date/time → info+confirm), single + recurring weekly appointments, floating WhatsApp FAB, address/hours footer, JedilsonLogo header
+- **Admin login** (`/admin`): Credential-based (admin / 1234), JedilsonLogo, ambient glow
+- **Admin dashboard** (`/admin/dashboard`):
+  - **Visão Geral**: KPI cards + 14-day revenue area chart + services bar chart
+  - **Calendário**: FullCalendar week/day view with per-barber filter, color-coded events
+  - **Agendamentos**: Table with period/barber filters, recurring badge, delete single/group
+  - **Novo Agendamento**: Admin create form (single + recurring)
+  - **Barbeiros**: Premium card grid with photo/avatar, specialty tag, WhatsApp link, Instagram, bio, birthday; full profile edit dialog
 
 ## Business Info
 
 - **Name**: Gedilson Rai Barbershop / Jedilson Hair
 - **Address**: R. Mademoiselle - Helena Maria, Osasco - SP, 06253-200
-- **Phone**: (11) 97343-6623
+- **Phone / WhatsApp**: (11) 97343-6623
 - **Hours**: Ter–Sáb 07:00–20:00 | Dom 07:00–14:00 | Seg: Fechado
 - **Admin credentials**: admin / 1234
 
-## Feature Notes
+## Barber profile fields
 
-### Multi-barber support
-- `barberId` is nullable on appointments — existing data without a barber is preserved
-- Available-slots conflict checking is per-barber when `barberId` is provided
-- Default barbers seeded on server start if table is empty
-- Clients can optionally pick a barber or leave "Qualquer barbeiro"
-- Admin can filter calendar and appointments list by barber
+`barbersTable`: id, name, photo (URL), phone, birthDate (YYYY-MM-DD), bio, specialty, instagram, active, createdAt
 
-### 30-min slot enforcement + 3-month booking window
-- All time slots are generated in 30-min increments
-- Backend validates booking date is within 3 months from today (400 if exceeded)
-- Frontend `max` attribute on date inputs enforces the same window
+## User preferences
 
-### Recurring appointments
-- Admin and clients can create weekly recurring appointments for "this month" or "next 2 months"
-- Conflicts are skipped (not rejected); result includes `created` and `skipped` arrays
-- Group delete removes all appointments sharing a `recurrenceGroupId`
+- Brazilian Portuguese UI throughout
+- Deep black (#080808) background, accent red (#C1121F), gold (#C9A84C)
+- Playfair Display for headings, Inter for body
+- Glass-card design system (glass-card, glass, glass-strong CSS classes)
+- Floating WhatsApp button on booking page
 
-## Notes on api-zod index.ts
+## Gotchas
 
-`lib/api-zod/src/index.ts` manually lists only non-conflicting types from `generated/types/` (excludes `createAppointmentBody`, `updateAppointmentBody`, `loginBody` which share names with Zod schemas in `generated/api.ts`). After running codegen, check if new generated types need to be added there.
+- SelectItem cannot have empty string value — use "all" sentinel, convert to null before API calls
+- `bg-gold` / `text-gold` / `border-gold` are custom CSS classes (not Tailwind)
+- After codegen, always check `lib/api-zod/src/index.ts` for new naming conflicts
+- Monday is closed — validate `getUTCDay() === 1` on date input
+
+## Pointers
+
+- Skills: `.local/skills/pnpm-workspace`, `.local/skills/react-vite`, `.local/skills/database`
+- DB ref: `lib/db/src/schema/barbers.ts`, `lib/db/src/schema/appointments.ts`
+- API spec: `lib/api-spec/openapi.yaml`

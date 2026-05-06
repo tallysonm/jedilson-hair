@@ -10,6 +10,11 @@ export interface Barber {
   id: number;
   name: string;
   photo?: string | null;
+  phone?: string | null;
+  birthDate?: string | null;
+  bio?: string | null;
+  specialty?: string | null;
+  instagram?: string | null;
   active: boolean;
   createdAt: string;
 }

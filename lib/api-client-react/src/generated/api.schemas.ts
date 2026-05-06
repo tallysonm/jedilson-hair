@@ -22,6 +22,11 @@ export interface Barber {
   id: number;
   name: string;
   photo?: string | null;
+  phone?: string | null;
+  birthDate?: string | null;
+  bio?: string | null;
+  specialty?: string | null;
+  instagram?: string | null;
   active: boolean;
   createdAt: string;
 }
@@ -29,11 +34,18 @@ export interface Barber {
 export interface CreateBarberBody {
   name: string;
   photo?: string | null;
+  phone?: string | null;
+  specialty?: string | null;
 }
 
 export interface UpdateBarberBody {
   name?: string;
   photo?: string | null;
+  phone?: string | null;
+  birthDate?: string | null;
+  bio?: string | null;
+  specialty?: string | null;
+  instagram?: string | null;
   active?: boolean;
 }
 

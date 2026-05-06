@@ -34,6 +34,11 @@ export const ListBarbersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   photo: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  specialty: zod.string().nullish(),
+  instagram: zod.string().nullish(),
   active: zod.boolean(),
   createdAt: zod.string(),
 });
@@ -45,6 +50,8 @@ export const ListBarbersResponse = zod.array(ListBarbersResponseItem);
 export const CreateBarberBody = zod.object({
   name: zod.string(),
   photo: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  specialty: zod.string().nullish(),
 });
 
 /**
@@ -57,6 +64,11 @@ export const UpdateBarberParams = zod.object({
 export const UpdateBarberBody = zod.object({
   name: zod.string().optional(),
   photo: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  specialty: zod.string().nullish(),
+  instagram: zod.string().nullish(),
   active: zod.boolean().optional(),
 });
 
@@ -64,6 +76,11 @@ export const UpdateBarberResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   photo: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  specialty: zod.string().nullish(),
+  instagram: zod.string().nullish(),
   active: zod.boolean(),
   createdAt: zod.string(),
 });

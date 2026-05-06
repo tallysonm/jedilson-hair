@@ -3,8 +3,6 @@ export * from "./generated/types/appointment";
 export * from "./generated/types/appointmentStatus";
 export * from "./generated/types/availableSlots";
 export * from "./generated/types/barber";
-export * from "./generated/types/createBarberBody";
-export * from "./generated/types/updateBarberBody";
 export * from "./generated/types/createRecurringAppointmentBody";
 export * from "./generated/types/createRecurringAppointmentBodyPeriod";
 export * from "./generated/types/dashboardSummary";

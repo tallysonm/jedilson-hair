@@ -9,4 +9,6 @@
 export interface CreateBarberBody {
   name: string;
   photo?: string | null;
+  phone?: string | null;
+  specialty?: string | null;
 }

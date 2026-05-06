@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { useAdminLogin } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Lock, Scissors } from "lucide-react";
+import { User, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { JedilsonLogo } from "@/components/Logo";
 
 export default function AdminLoginPage() {
   const [, setLocation] = useLocation();
@@ -35,6 +36,7 @@ export default function AdminLoginPage() {
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-accent/6 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gold/3 blur-[100px]" />
       </div>
 
       <motion.div
@@ -47,11 +49,12 @@ export default function AdminLoginPage() {
         <div className="glass-card rounded-3xl p-8 border border-white/7 shadow-2xl">
           {/* Brand */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-accent/15 border border-accent/25 flex items-center justify-center mb-4">
-              <Scissors className="w-6 h-6 text-accent" />
+            <div className="mb-5">
+              <JedilsonLogo size="lg" />
             </div>
-            <h1 className="font-display text-2xl font-bold text-white tracking-tight">Painel Admin</h1>
-            <p className="text-muted-foreground text-sm mt-1">Jedilson Hair · Osasco, SP</p>
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-5" />
+            <h1 className="font-display text-xl font-bold text-white tracking-tight">Painel Administrativo</h1>
+            <p className="text-muted-foreground text-sm mt-1">Osasco, SP · (11) 97343-6623</p>
           </div>
 
           {/* Form */}
