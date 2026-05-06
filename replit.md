@@ -38,7 +38,7 @@ React + Vite frontend. Three pages:
   - **Novo Agendamento** — Create appointment with barber selector
   - **Barbeiros** — Manage barbers: add, rename, activate/deactivate
 
-Design system: dark (#0A0A0A bg), red (#C1121F primary), gold (#D4AF37 accent), glassmorphism cards, Inter font.
+Design system: deep black (#0A0A0A bg), red (#C1121F accent), gold (#C9A84C), glassmorphism cards, Playfair Display (headings) + Inter (body). Step-based booking wizard: service grid → barber cards → date/time pills → info + confirm. Admin: sidebar with animated nav indicator, Playfair headings, glass-card throughout, barber card grid.
 
 ### `artifacts/api-server` — API Server (preview `/api`)
 Express backend serving all routes under `/api`:
