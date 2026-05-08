@@ -1,0 +1,9 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║           JEDILSON HAIR — CÓDIGO COMPLETO DO APP                           ║
+║           Barbearia de Alta Performance — Osasco, SP                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Stack: React 19 + Vite 7 + TailwindCSS v4 + Framer Motion + Express 5 + PostgreSQL + Drizzle ORM
+Admin: usuario=admin  senha=1234
+WhatsApp: 5511973436623
+
