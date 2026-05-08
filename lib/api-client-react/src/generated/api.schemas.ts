@@ -16,6 +16,43 @@ export interface Service {
   priceLabel: string;
   durationMinutes: number;
   durationLabel: string;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface CreateServiceBody {
+  /** URL-friendly unique ID (e.g. corte-simples) */
+  id: string;
+  name: string;
+  price: number;
+  durationMinutes: number;
+  sortOrder?: number;
+}
+
+export interface UpdateServiceBody {
+  name?: string;
+  price?: number;
+  durationMinutes?: number;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface BlockedSlot {
+  id: number;
+  date: string;
+  time?: string | null;
+  reason?: string | null;
+  allDay: boolean;
+  createdAt: string;
+}
+
+export interface CreateBlockedSlotBody {
+  /** Date in YYYY-MM-DD format */
+  date: string;
+  /** Specific time slot to block (HH:MM). If null, blocks entire day. */
+  time?: string | null;
+  reason?: string | null;
+  allDay?: boolean;
 }
 
 export interface Barber {
@@ -172,6 +209,13 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type ListBlockedSlotsParams = {
+  /**
+   * Filter by date (YYYY-MM-DD)
+   */
+  date?: string;
+};
+
 export type ListAppointmentsParams = {
   /**
    * Filter by specific date (YYYY-MM-DD)
@@ -220,3 +264,21 @@ export type GetAvailableSlotsParams = {
    */
   barberId?: string;
 };
+
+export type ExportAppointmentsParams = {
+  /**
+   * Period filter
+   */
+  period?: ExportAppointmentsPeriod;
+  barberId?: string;
+};
+
+export type ExportAppointmentsPeriod =
+  (typeof ExportAppointmentsPeriod)[keyof typeof ExportAppointmentsPeriod];
+
+export const ExportAppointmentsPeriod = {
+  day: "day",
+  week: "week",
+  month: "month",
+  all: "all",
+} as const;

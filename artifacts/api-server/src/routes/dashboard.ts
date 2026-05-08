@@ -9,6 +9,12 @@ function getTodayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
+function getTomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
 function getMonthRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
@@ -81,6 +87,21 @@ router.get("/services-chart", async (_req, res) => {
 
   const result = Array.from(map.values()).sort((a, b) => b.count - a.count);
   res.json(result);
+});
+
+router.get("/reminders", async (_req, res) => {
+  const tomorrow = getTomorrowStr();
+  const rows = await db
+    .select()
+    .from(appointmentsTable)
+    .where(and(eq(appointmentsTable.date, tomorrow), eq(appointmentsTable.status, "pending")))
+    .orderBy(appointmentsTable.time);
+
+  res.json(rows.map(r => ({
+    ...r,
+    servicePrice: Number(r.servicePrice),
+    createdAt: r.createdAt.toISOString(),
+  })));
 });
 
 export default router;

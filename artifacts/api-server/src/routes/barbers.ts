@@ -32,6 +32,20 @@ router.get("/", async (_req, res) => {
   res.json(rows.map(formatBarber));
 });
 
+router.get("/:id", async (req, res) => {
+  const id = parseInt(req.params["id"] ?? "");
+  if (isNaN(id)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+  const [row] = await db.select().from(barbersTable).where(eq(barbersTable.id, id));
+  if (!row) {
+    res.status(404).json({ error: "Barbeiro não encontrado" });
+    return;
+  }
+  res.json(formatBarber(row));
+});
+
 router.post("/", async (req, res) => {
   const { name, photo, phone, specialty } = req.body as {
     name: string;

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { appointmentsTable } from "@workspace/db";
+import { appointmentsTable, servicesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { SERVICES } from "./services";
+
 const router = Router();
 
 const BUFFER_MINUTES = 10;
@@ -15,9 +15,9 @@ function timeToMinutes(t: string): number {
 function getOpeningHours(dateStr: string): { open: number; close: number } | null {
   const d = new Date(dateStr + "T12:00:00");
   const day = d.getDay();
-  if (day === 1) return null; // Monday closed
-  if (day === 0) return { open: 7, close: 14 }; // Sunday
-  return { open: 7, close: 20 }; // Tue-Sat
+  if (day === 1) return null;
+  if (day === 0) return { open: 7, close: 14 };
+  return { open: 7, close: 20 };
 }
 
 function getMaxAllowedDate(): string {
@@ -26,17 +26,11 @@ function getMaxAllowedDate(): string {
   return max.toISOString().split("T")[0];
 }
 
-function generateRecurringDates(
-  weekday: number,
-  period: "this_month" | "next_2_months",
-  startDate: string
-): string[] {
+function generateRecurringDates(weekday: number, period: "this_month" | "next_2_months", startDate: string): string[] {
   const ref = new Date(startDate + "T12:00:00");
   const dates: string[] = [];
   const today = new Date().toISOString().split("T")[0];
   const maxDate = getMaxAllowedDate();
-
-  // Determine month range
   const months: Array<{ year: number; month: number }> = [];
   months.push({ year: ref.getFullYear(), month: ref.getMonth() });
   if (period === "next_2_months") {
@@ -45,20 +39,16 @@ function generateRecurringDates(
       months.push({ year: d.getFullYear(), month: d.getMonth() });
     }
   }
-
   for (const { year, month } of months) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day++) {
       const candidate = new Date(year, month, day);
       if (candidate.getDay() === weekday) {
         const iso = candidate.toISOString().split("T")[0];
-        if (iso >= today && iso <= maxDate) {
-          dates.push(iso);
-        }
+        if (iso >= today && iso <= maxDate) dates.push(iso);
       }
     }
   }
-
   return dates;
 }
 
@@ -66,16 +56,15 @@ function generateGroupId(): string {
   return `grp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+async function getServiceFromDb(serviceId: string) {
+  const [svc] = await db.select().from(servicesTable).where(eq(servicesTable.id, serviceId));
+  return svc ?? null;
+}
+
 router.post("/", async (req, res) => {
   const { clientName, clientPhone, serviceId, time, weekday, period, startDate, barberId } = req.body as {
-    clientName: string;
-    clientPhone: string;
-    serviceId: string;
-    time: string;
-    weekday: number;
-    period: "this_month" | "next_2_months";
-    startDate: string;
-    barberId?: string | null;
+    clientName: string; clientPhone: string; serviceId: string; time: string;
+    weekday: number; period: "this_month" | "next_2_months"; startDate: string; barberId?: string | null;
   };
 
   if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !period || !startDate) {
@@ -87,14 +76,13 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const service = SERVICES.find((s) => s.id === serviceId);
+  const service = await getServiceFromDb(serviceId);
   if (!service) {
-    res.status(400).json({ error: "Invalid service ID" });
+    res.status(400).json({ error: "Serviço inválido" });
     return;
   }
 
   const targetDates = generateRecurringDates(weekday, period, startDate);
-
   if (targetDates.length === 0) {
     res.status(400).json({ error: "Nenhuma data disponível no período selecionado" });
     return;
@@ -103,25 +91,14 @@ router.post("/", async (req, res) => {
   const newStart = timeToMinutes(time);
   const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
   const groupId = generateGroupId();
-
   const created: object[] = [];
   const skipped: string[] = [];
 
   for (const date of targetDates) {
-    // Skip if shop is closed that day
     const hours = getOpeningHours(date);
-    if (!hours) {
-      skipped.push(date);
-      continue;
-    }
+    if (!hours) { skipped.push(date); continue; }
+    if (newStart < hours.open * 60 || newEnd > hours.close * 60) { skipped.push(date); continue; }
 
-    // Check if time is within opening hours
-    if (newStart < hours.open * 60 || newEnd > hours.close * 60) {
-      skipped.push(date);
-      continue;
-    }
-
-    // Overlap check for this date (per barber if barberId given)
     const overlapConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
     if (barberId) overlapConditions.push(eq(appointmentsTable.barberId, barberId));
 
@@ -130,42 +107,29 @@ router.post("/", async (req, res) => {
       .from(appointmentsTable)
       .where(and(...overlapConditions));
 
-    const hasOverlap = sameDayPending.some((b) => {
-      const existingService = SERVICES.find((s) => s.id === b.serviceId);
-      const existingDuration = existingService ? existingService.durationMinutes : 30;
-      const existingStart = timeToMinutes(b.time);
-      const existingEnd = existingStart + existingDuration + BUFFER_MINUTES;
-      return newStart < existingEnd && newEnd > existingStart;
-    });
+    const hasOverlap = (await Promise.all(sameDayPending.map(async b => {
+      const s = await getServiceFromDb(b.serviceId);
+      const d = s ? s.durationMinutes : 30;
+      const es = timeToMinutes(b.time);
+      const ee = es + d + BUFFER_MINUTES;
+      return newStart < ee && newEnd > es;
+    }))).some(Boolean);
 
-    if (hasOverlap) {
-      skipped.push(date);
-      continue;
-    }
+    if (hasOverlap) { skipped.push(date); continue; }
 
-    const [row] = await db
-      .insert(appointmentsTable)
-      .values({
-        clientName,
-        clientPhone,
-        serviceId,
-        serviceName: service.name,
-        servicePrice: service.price.toString(),
-        date,
-        time,
-        barberId: barberId ?? null,
-        status: "pending",
-        isRecurring: true,
-        recurrenceType: "monthly_weekly",
-        recurrenceGroupId: groupId,
-      })
-      .returning();
+    const [row] = await db.insert(appointmentsTable).values({
+      clientName, clientPhone, serviceId,
+      serviceName: service.name,
+      servicePrice: service.price,
+      date, time,
+      barberId: barberId ?? null,
+      status: "pending",
+      isRecurring: true,
+      recurrenceType: "monthly_weekly",
+      recurrenceGroupId: groupId,
+    }).returning();
 
-    created.push({
-      ...row,
-      servicePrice: Number(row.servicePrice),
-      createdAt: row.createdAt.toISOString(),
-    });
+    created.push({ ...row, servicePrice: Number(row.servicePrice), createdAt: row.createdAt.toISOString() });
   }
 
   res.status(201).json({ groupId, created, skipped });

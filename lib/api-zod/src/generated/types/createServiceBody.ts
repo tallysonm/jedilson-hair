@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Service {
+export interface CreateServiceBody {
+  /** URL-friendly unique ID (e.g. corte-simples) */
   id: string;
   name: string;
   price: number;
-  priceLabel: string;
   durationMinutes: number;
-  durationLabel: string;
-  active: boolean;
-  sortOrder: number;
+  sortOrder?: number;
 }

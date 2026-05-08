@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, CalendarDays, List, PlusCircle, LogOut,
-  Trash2, CheckCircle2, TrendingUp, CalendarCheck, DollarSign,
-  Users, Pencil, UserCheck, UserX, RefreshCw, Check, X as XIcon,
+  Trash2, TrendingUp, CalendarCheck, DollarSign,
+  Users, Pencil, UserCheck, UserX, Check, X as XIcon,
   MessageCircle, Instagram, Phone, Cake, FileText, Camera,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Bell, Scissors, Ban, Download,
+  Tag, Clock, AlertCircle, CalendarOff, RefreshCw, CheckCircle2,
 } from "lucide-react";
 import {
   useGetDashboardSummary, getGetDashboardSummaryQueryKey,
@@ -13,13 +14,18 @@ import {
   useGetServicesChart,    getGetServicesChartQueryKey,
   useListAppointments,    getListAppointmentsQueryKey,
   useUpdateAppointment,   useDeleteAppointment,
-  useDeleteRecurringGroup, useListServices, useCreateAppointment,
+  useDeleteRecurringGroup, useListServices, getListServicesQueryKey,
+  useCreateService, useUpdateService, useDeleteService,
+  useCreateAppointment,
   useGetAvailableSlots,   getGetAvailableSlotsQueryKey,
   useListBarbers,         getListBarbersQueryKey,
   useCreateBarber,        useUpdateBarber,
   useCreateRecurringAppointments,
+  useListBlockedSlots,    getListBlockedSlotsQueryKey,
+  useCreateBlockedSlot,   useDeleteBlockedSlot,
+  useGetDashboardReminders, getGetDashboardRemindersQueryKey,
 } from "@workspace/api-client-react";
-import type { Barber } from "@workspace/api-client-react";
+import type { Barber, Service } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +67,9 @@ export default function AdminDashboardPage() {
     { id: "appointments", icon: List,            label: "Agendamentos" },
     { id: "new",          icon: PlusCircle,      label: "Novo Agendamento" },
     { id: "barbers",      icon: Users,           label: "Barbeiros" },
+    { id: "services",     icon: Scissors,        label: "Serviços" },
+    { id: "blocked",      icon: CalendarOff,     label: "Horários Bloqueados" },
+    { id: "reminders",    icon: Bell,            label: "Lembretes" },
   ];
 
   return (
@@ -102,6 +111,9 @@ export default function AdminDashboardPage() {
             {activeTab === "appointments" && <AppointmentsTab />}
             {activeTab === "new"          && <NewAppointmentTab onComplete={() => setActiveTab("appointments")} />}
             {activeTab === "barbers"      && <BarbeirosTab />}
+            {activeTab === "services"     && <ServicosTab />}
+            {activeTab === "blocked"      && <HorariosTab />}
+            {activeTab === "reminders"    && <LembretesTab />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -319,6 +331,14 @@ function AppointmentsTab() {
               {barbers.filter((b)=>b.active).map((b)=><SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          <a
+            href={`/api/appointments/export?period=${period ?? "all"}${barberId !== "all" ? `&barberId=${barberId}` : ""}`}
+            download
+            className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-gold/8 hover:bg-gold/15 text-gold border border-gold/20 text-xs font-semibold transition-colors"
+            title="Exportar CSV"
+          >
+            <Download className="w-3.5 h-3.5" /> Exportar CSV
+          </a>
         </div>
       </div>
       <div className="glass-card rounded-2xl overflow-hidden">
@@ -728,6 +748,353 @@ function BarbeirosTab() {
           onSave={handleSaveProfile}
           isPending={updateMutation.isPending}
         />
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   SERVIÇOS TAB
+══════════════════════════════════════════════ */
+type EditServiceState = { name: string; price: string; durationMinutes: string };
+
+function ServicosTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: services = [], isLoading } = useListServices({ query: { queryKey: getListServicesQueryKey() } });
+  const createMutation = useCreateService();
+  const updateMutation = useUpdateService();
+  const deleteMutation = useDeleteService();
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListServicesQueryKey() });
+
+  const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState<Service | null>(null);
+  const [form, setForm] = useState({ id: "", name: "", price: "", durationMinutes: "" });
+  const [editState, setEditState] = useState<EditServiceState>({ name: "", price: "", durationMinutes: "" });
+
+  const inputClass = "bg-white/5 border border-white/8 h-10 rounded-xl text-white text-sm px-3 w-full focus:outline-none focus:border-accent/40 transition-colors placeholder:text-muted-foreground";
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.id || !form.name || !form.price || !form.durationMinutes) return;
+    createMutation.mutate(
+      { data: { id: form.id, name: form.name, price: parseFloat(form.price), durationMinutes: parseInt(form.durationMinutes) } },
+      { onSuccess: () => { toast({ title: "Serviço criado!" }); invalidate(); setShowForm(false); setForm({ id: "", name: "", price: "", durationMinutes: "" }); },
+        onError: () => toast({ title: "Erro ao criar serviço", variant: "destructive" }) }
+    );
+  };
+
+  const handleUpdate = () => {
+    if (!editTarget) return;
+    updateMutation.mutate(
+      { id: editTarget.id, data: { name: editState.name, price: parseFloat(editState.price), durationMinutes: parseInt(editState.durationMinutes) } },
+      { onSuccess: () => { toast({ title: "Serviço atualizado!" }); invalidate(); setEditTarget(null); },
+        onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }) }
+    );
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate({ id }, { onSuccess: () => { toast({ title: "Serviço desativado" }); invalidate(); } });
+  };
+
+  const openEdit = (s: Service) => {
+    setEditTarget(s);
+    setEditState({ name: s.name, price: String(s.price), durationMinutes: String(s.durationMinutes) });
+  };
+
+  return (
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <SectionHeader
+        title="Serviços"
+        action={
+          <Button size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl gap-2 h-9 font-semibold" onClick={() => setShowForm(v => !v)}>
+            <Tag className="w-4 h-4" /> Novo Serviço
+          </Button>
+        }
+      />
+
+      <AnimatePresence>
+        {showForm && (
+          <motion.form initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            onSubmit={handleCreate} className="glass-card rounded-2xl p-5 space-y-4 border border-white/8">
+            <p className="text-sm font-semibold text-white">Adicionar novo serviço</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome do serviço</label>
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Ex: Corte + Barba" className={inputClass} required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID (slug)</label>
+                <input value={form.id} onChange={e => setForm(p => ({ ...p, id: e.target.value.toLowerCase().replace(/\s+/g, "-") }))} placeholder="ex: corte-barba" className={inputClass} required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" />Duração (min)</label>
+                <input type="number" value={form.durationMinutes} onChange={e => setForm(p => ({ ...p, durationMinutes: e.target.value }))} placeholder="30" className={inputClass} required />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preço (R$)</label>
+                <input type="number" step="0.01" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} placeholder="35.00" className={inputClass} required />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" size="sm" className="border-white/10 hover:bg-white/5 rounded-xl" onClick={() => setShowForm(false)}>Cancelar</Button>
+              <Button type="submit" size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Salvando..." : "Criar Serviço"}
+              </Button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {isLoading ? (
+        <div className="glass-card rounded-2xl px-6 py-10 text-center text-muted-foreground text-sm">Carregando...</div>
+      ) : (
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead><tr className="border-b border-white/6">{["Serviço","Duração","Preço",""].map(h => <th key={h} className="px-5 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>)}</tr></thead>
+            <tbody>
+              {services.length === 0 ? (
+                <tr><td colSpan={4} className="px-5 py-10 text-center text-muted-foreground text-sm">Nenhum serviço encontrado.</td></tr>
+              ) : services.map(s => (
+                <tr key={s.id} className="border-b border-white/4 hover:bg-white/3 transition-colors group">
+                  <td className="px-5 py-4">
+                    <p className="font-semibold text-white text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground/60 font-mono">{s.id}</p>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">{s.durationLabel}</td>
+                  <td className="px-5 py-4 text-sm text-gold font-bold">{s.priceLabel}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEdit(s)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white flex items-center justify-center transition-colors" title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleDelete(s.id)} className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-colors" title="Desativar"><Ban className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      {editTarget && (
+        <Dialog open onOpenChange={o => !o && setEditTarget(null)}>
+          <DialogContent className="bg-[#0e0e0e] border border-white/8 rounded-3xl shadow-2xl sm:max-w-md">
+            <DialogHeader><DialogTitle className="font-display text-white text-lg font-bold">Editar — {editTarget.name}</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome</label>
+                <input value={editState.name} onChange={e => setEditState(p => ({ ...p, name: e.target.value }))} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Clock className="w-3 h-3" />Duração (min)</label>
+                  <input type="number" value={editState.durationMinutes} onChange={e => setEditState(p => ({ ...p, durationMinutes: e.target.value }))} className={inputClass} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preço (R$)</label>
+                  <input type="number" step="0.01" value={editState.price} onChange={e => setEditState(p => ({ ...p, price: e.target.value }))} className={inputClass} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2 sm:justify-end pt-2">
+              <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 rounded-xl" onClick={() => setEditTarget(null)}>Cancelar</Button>
+              <Button size="sm" disabled={updateMutation.isPending} onClick={handleUpdate} className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6 glow-accent">
+                {updateMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   HORÁRIOS BLOQUEADOS TAB
+══════════════════════════════════════════════ */
+function HorariosTab() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: blocked = [], isLoading } = useListBlockedSlots({}, { query: { queryKey: getListBlockedSlotsQueryKey({}) } });
+  const createMutation = useCreateBlockedSlot();
+  const deleteMutation = useDeleteBlockedSlot();
+  const invalidate = () => qc.invalidateQueries({ queryKey: getListBlockedSlotsQueryKey({}) });
+
+  const [form, setForm] = useState({ date: "", time: "", reason: "", allDay: true });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.date) return;
+    createMutation.mutate(
+      { data: { date: form.date, time: form.allDay ? null : (form.time || null), reason: form.reason || null, allDay: form.allDay } },
+      { onSuccess: () => { toast({ title: "Horário bloqueado!" }); invalidate(); setForm({ date: "", time: "", reason: "", allDay: true }); },
+        onError: () => toast({ title: "Erro ao bloquear", variant: "destructive" }) }
+    );
+  };
+
+  const inputClass = "bg-white/5 border border-white/8 h-10 rounded-xl text-white text-sm px-3 w-full focus:outline-none focus:border-accent/40 transition-colors placeholder:text-muted-foreground";
+
+  return (
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <SectionHeader title="Horários Bloqueados" />
+
+      {/* Add form */}
+      <div className="glass-card rounded-2xl p-5 space-y-4 border border-white/8">
+        <p className="text-sm font-semibold text-white flex items-center gap-2"><CalendarOff className="w-4 h-4 text-accent" />Bloquear data ou horário</p>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</label>
+              <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className={`${inputClass} cursor-pointer`} required />
+            </div>
+            <div className="space-y-1.5 col-span-2 sm:col-span-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Motivo (opcional)</label>
+              <input value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="Ex: Feriado, folga..." className={inputClass} />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.allDay} onChange={e => setForm(p => ({ ...p, allDay: e.target.checked }))}
+                className="w-4 h-4 rounded border-white/20 accent-accent cursor-pointer" />
+              <span className="text-sm text-muted-foreground">Bloquear o dia inteiro</span>
+            </label>
+          </div>
+          {!form.allDay && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horário específico (HH:MM)</label>
+              <input type="time" value={form.time} onChange={e => setForm(p => ({ ...p, time: e.target.value }))} className={`${inputClass} cursor-pointer`} />
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Bloqueando..." : "Bloquear"}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="glass-card rounded-2xl px-6 py-10 text-center text-muted-foreground text-sm">Carregando...</div>
+      ) : blocked.length === 0 ? (
+        <div className="glass-card rounded-2xl px-6 py-10 text-center text-muted-foreground text-sm">Nenhum bloqueio cadastrado.</div>
+      ) : (
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead><tr className="border-b border-white/6">{["Data","Horário","Motivo","Tipo",""].map(h => <th key={h} className="px-5 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>)}</tr></thead>
+            <tbody>
+              {blocked.map(b => (
+                <tr key={b.id} className="border-b border-white/4 hover:bg-white/3 transition-colors group">
+                  <td className="px-5 py-4 text-sm font-semibold text-white">{b.date.split("-").reverse().join("/")}</td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">{b.time ?? <span className="opacity-30">—</span>}</td>
+                  <td className="px-5 py-4 text-sm text-muted-foreground">{b.reason ?? <span className="opacity-30">—</span>}</td>
+                  <td className="px-5 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${b.allDay ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"}`}>
+                      {b.allDay ? "Dia inteiro" : "Horário"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <button onClick={() => deleteMutation.mutate({ id: b.id }, { onSuccess: () => { toast({ title: "Bloqueio removido" }); invalidate(); } })}
+                      className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" title="Remover">
+                      <XIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   LEMBRETES TAB
+══════════════════════════════════════════════ */
+function LembretesTab() {
+  const { data: reminders = [], isLoading, refetch } = useGetDashboardReminders({ query: { queryKey: getGetDashboardRemindersQueryKey() } });
+  const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
+
+  const waLink = (apt: { clientName: string; clientPhone: string; serviceName: string; date: string; time: string }) => {
+    const dateStr = apt.date.split("-").reverse().join("/");
+    const msg = `Olá, ${apt.clientName.split(" ")[0]}! 👋 Lembramos que você tem um agendamento amanhã (${dateStr}) às ${apt.time} para ${apt.serviceName} na Jedilson Hair. Qualquer dúvida, estamos aqui! ✂️`;
+    return `https://wa.me/55${apt.clientPhone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
+  };
+
+  const tomorrow = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0].split("-").reverse().join("/");
+  })();
+
+  return (
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <SectionHeader
+        title="Lembretes"
+        action={
+          <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5 rounded-xl gap-2 h-9 text-muted-foreground" onClick={() => refetch()}>
+            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+          </Button>
+        }
+      />
+
+      {/* Info box */}
+      <div className="glass-card rounded-2xl p-5 border border-gold/15 bg-gold/3">
+        <div className="flex items-start gap-3">
+          <Bell className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-white mb-1">Agendamentos de amanhã — {tomorrow}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Abaixo estão todos os agendamentos pendentes para amanhã. Clique em "Enviar Lembrete" para abrir o WhatsApp com a mensagem já pronta — só precisa clicar em Enviar.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="glass-card rounded-2xl px-6 py-10 text-center text-muted-foreground text-sm">Carregando...</div>
+      ) : reminders.length === 0 ? (
+        <div className="glass-card rounded-2xl px-6 py-12 text-center space-y-2">
+          <Bell className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+          <p className="text-muted-foreground text-sm">Nenhum agendamento para amanhã.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reminders.map((apt, i) => {
+            const barberName = apt.barberId ? barbers.find(b => String(b.id) === apt.barberId)?.name ?? `#${apt.barberId}` : "Qualquer disponível";
+            return (
+              <motion.div key={apt.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                className="glass-card rounded-2xl p-5 border border-white/7 flex items-center gap-4">
+                {/* Avatar */}
+                <div className="w-10 h-10 rounded-full bg-white/6 flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">
+                  {apt.clientName.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-white text-sm">{apt.clientName}</p>
+                    <span className="text-xs text-muted-foreground">{apt.clientPhone}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{apt.serviceName}</span>
+                    <span className="text-xs text-gold font-semibold">{apt.time}</span>
+                    <span className="text-xs text-muted-foreground/60">{barberName}</span>
+                  </div>
+                </div>
+                {/* CTA */}
+                <a href={waLink(apt)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/18 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors shrink-0 whitespace-nowrap">
+                  <MessageCircle className="w-3.5 h-3.5" /> Enviar Lembrete
+                </a>
+              </motion.div>
+            );
+          })}
+          <div className="text-center pt-2">
+            <p className="text-xs text-muted-foreground">{reminders.length} agendamento(s) para amanhã · Clique para abrir o WhatsApp com a mensagem pronta</p>
+          </div>
+        </div>
       )}
     </div>
   );

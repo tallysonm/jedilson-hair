@@ -20,6 +20,8 @@ tags:
     description: Admin dashboard data
   - name: barbers
     description: Barber management
+  - name: blocked-slots
+    description: Blocked time slot management
 
 paths:
   /healthz:
@@ -39,7 +41,7 @@ paths:
     get:
       operationId: listServices
       tags: [services]
-      summary: List all barbershop services
+      summary: List all active barbershop services
       responses:
         "200":
           description: List of services
@@ -49,6 +51,67 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a new service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceBody"
+      responses:
+        "201":
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceBody"
+      responses:
+        "200":
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete (deactivate) a service
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   /barbers:
     get:
@@ -83,6 +146,29 @@ paths:
                 $ref: "#/components/schemas/Barber"
 
   /barbers/{id}:
+    get:
+      operationId: getBarber
+      tags: [barbers]
+      summary: Get a single barber
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Barber details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Barber"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     patch:
       operationId: updateBarber
       tags: [barbers]
@@ -112,6 +198,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /blocked-slots:
+    get:
+      operationId: listBlockedSlots
+      tags: [blocked-slots]
+      summary: List all blocked slots
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+          description: Filter by date (YYYY-MM-DD)
+      responses:
+        "200":
+          description: List of blocked slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlockedSlot"
+    post:
+      operationId: createBlockedSlot
+      tags: [blocked-slots]
+      summary: Block a time slot or full day
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlockedSlotBody"
+      responses:
+        "201":
+          description: Blocked slot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockedSlot"
+
+  /blocked-slots/{id}:
+    delete:
+      operationId: deleteBlockedSlot
+      tags: [blocked-slots]
+      summary: Remove a blocked slot
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   /appointments:
     get:
@@ -222,6 +361,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RecurringAppointmentResult"
+
+  /appointments/export:
+    get:
+      operationId: exportAppointments
+      tags: [appointments]
+      summary: Export appointments as CSV
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [day, week, month, all]
+          description: Period filter
+        - in: query
+          name: barberId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
 
   /appointments/group/{groupId}:
     delete:
@@ -367,6 +530,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/ServicesChartEntry"
 
+  /dashboard/reminders:
+    get:
+      operationId: getDashboardReminders
+      tags: [dashboard]
+      summary: Get tomorrow's pending appointments for reminder sending
+      responses:
+        "200":
+          description: List of pending appointments for tomorrow
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
 components:
   schemas:
     HealthStatus:
@@ -391,7 +569,77 @@ components:
           type: integer
         durationLabel:
           type: string
-      required: [id, name, price, priceLabel, durationMinutes, durationLabel]
+        active:
+          type: boolean
+        sortOrder:
+          type: integer
+      required: [id, name, price, priceLabel, durationMinutes, durationLabel, active, sortOrder]
+
+    CreateServiceBody:
+      type: object
+      properties:
+        id:
+          type: string
+          description: URL-friendly unique ID (e.g. corte-simples)
+        name:
+          type: string
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+        sortOrder:
+          type: integer
+      required: [id, name, price, durationMinutes]
+
+    UpdateServiceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+        active:
+          type: boolean
+        sortOrder:
+          type: integer
+
+    BlockedSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        time:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        allDay:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, date, allDay, createdAt]
+
+    CreateBlockedSlotBody:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date in YYYY-MM-DD format
+        time:
+          type: string
+          nullable: true
+          description: Specific time slot to block (HH:MM). If null, blocks entire day.
+        reason:
+          type: string
+          nullable: true
+        allDay:
+          type: boolean
+      required: [date]
 
     Barber:
       type: object

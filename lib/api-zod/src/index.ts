@@ -3,18 +3,30 @@ export * from "./generated/types/appointment";
 export * from "./generated/types/appointmentStatus";
 export * from "./generated/types/availableSlots";
 export * from "./generated/types/barber";
+export * from "./generated/types/blockedSlot";
+// createAppointmentBody — conflicts with api.ts, excluded
+// createBarberBody — conflicts with api.ts, excluded
+// createBlockedSlotBody — conflicts with api.ts, excluded
+// createServiceBody — conflicts with api.ts, excluded
 export * from "./generated/types/createRecurringAppointmentBody";
 export * from "./generated/types/createRecurringAppointmentBodyPeriod";
 export * from "./generated/types/dashboardSummary";
 export * from "./generated/types/errorResponse";
+export * from "./generated/types/exportAppointmentsParams";
+export * from "./generated/types/exportAppointmentsPeriod";
 export * from "./generated/types/getAvailableSlotsParams";
 export * from "./generated/types/healthStatus";
 export * from "./generated/types/listAppointmentsParams";
 export * from "./generated/types/listAppointmentsPeriod";
 export * from "./generated/types/listAppointmentsStatus";
+export * from "./generated/types/listBlockedSlotsParams";
+// loginBody — conflicts with api.ts, excluded
 export * from "./generated/types/loginResponse";
 export * from "./generated/types/recurringAppointmentResult";
 export * from "./generated/types/revenueChartEntry";
 export * from "./generated/types/service";
 export * from "./generated/types/servicesChartEntry";
+// updateAppointmentBody — conflicts with api.ts, excluded
 export * from "./generated/types/updateAppointmentBodyStatus";
+// updateBarberBody — conflicts with api.ts, excluded
+// updateServiceBody — conflicts with api.ts, excluded

@@ -37,18 +37,22 @@ Full-stack appointment scheduling app for "Gedilson Rai Barbershop" / "Jedilson 
 - **barberId nullable**: Appointments can have no barber; conflict-checking is per-barber when set
 - **30-min slots only**: Both frontend and backend enforce 30-minute booking increments
 - **3-month booking window**: Backend validates date is within 3 months; frontend enforces with `max` attribute
-- **api-zod/index.ts is manual**: After codegen, check for new types that conflict with Zod schema names in `generated/api.ts` and exclude them from index.ts (known conflicts: createAppointmentBody, updateAppointmentBody, loginBody, createBarberBody, updateBarberBody)
+- **api-zod/index.ts is manual**: After codegen, check for new types that conflict with Zod schema names in `generated/api.ts` and exclude them from index.ts (known conflicts: createAppointmentBody, updateAppointmentBody, loginBody, createBarberBody, updateBarberBody, createServiceBody, updateServiceBody, createBlockedSlotBody)
 
 ## Product
 
 - **Booking page** (`/`): 4-step wizard (service → barber → date/time → info+confirm), single + recurring weekly appointments, floating WhatsApp FAB, address/hours footer, JedilsonLogo header
+- **Barber public page** (`/barber/:id`): Individual profile with photo/bio/specialty/social links, services list, booking CTA
 - **Admin login** (`/admin`): Credential-based (admin / 1234), JedilsonLogo, ambient glow
 - **Admin dashboard** (`/admin/dashboard`):
   - **Visão Geral**: KPI cards + 14-day revenue area chart + services bar chart
   - **Calendário**: FullCalendar week/day view with per-barber filter, color-coded events
-  - **Agendamentos**: Table with period/barber filters, recurring badge, delete single/group
+  - **Agendamentos**: Table with period/barber filters, recurring badge, delete single/group, **CSV export button**
   - **Novo Agendamento**: Admin create form (single + recurring)
   - **Barbeiros**: Premium card grid with photo/avatar, specialty tag, WhatsApp link, Instagram, bio, birthday; full profile edit dialog
+  - **Serviços**: CRUD table — create, edit price/duration, deactivate services
+  - **Horários Bloqueados**: Block full days or specific time slots with optional reason
+  - **Lembretes**: Tomorrow's pending appointments with 1-click WhatsApp pre-filled message
 
 ## Business Info
 

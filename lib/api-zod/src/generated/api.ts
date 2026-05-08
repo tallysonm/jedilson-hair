@@ -15,7 +15,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * @summary List all barbershop services
+ * @summary List all active barbershop services
  */
 export const ListServicesResponseItem = zod.object({
   id: zod.string(),
@@ -24,8 +24,54 @@ export const ListServicesResponseItem = zod.object({
   priceLabel: zod.string(),
   durationMinutes: zod.number(),
   durationLabel: zod.string(),
+  active: zod.boolean(),
+  sortOrder: zod.number(),
 });
 export const ListServicesResponse = zod.array(ListServicesResponseItem);
+
+/**
+ * @summary Create a new service
+ */
+export const CreateServiceBody = zod.object({
+  id: zod.string().describe("URL-friendly unique ID (e.g. corte-simples)"),
+  name: zod.string(),
+  price: zod.number(),
+  durationMinutes: zod.number(),
+  sortOrder: zod.number().optional(),
+});
+
+/**
+ * @summary Update a service
+ */
+export const UpdateServiceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateServiceBody = zod.object({
+  name: zod.string().optional(),
+  price: zod.number().optional(),
+  durationMinutes: zod.number().optional(),
+  active: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+});
+
+export const UpdateServiceResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  price: zod.number(),
+  priceLabel: zod.string(),
+  durationMinutes: zod.number(),
+  durationLabel: zod.string(),
+  active: zod.boolean(),
+  sortOrder: zod.number(),
+});
+
+/**
+ * @summary Delete (deactivate) a service
+ */
+export const DeleteServiceParams = zod.object({
+  id: zod.coerce.string(),
+});
 
 /**
  * @summary List all barbers
@@ -52,6 +98,26 @@ export const CreateBarberBody = zod.object({
   photo: zod.string().nullish(),
   phone: zod.string().nullish(),
   specialty: zod.string().nullish(),
+});
+
+/**
+ * @summary Get a single barber
+ */
+export const GetBarberParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetBarberResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  photo: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  birthDate: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  specialty: zod.string().nullish(),
+  instagram: zod.string().nullish(),
+  active: zod.boolean(),
+  createdAt: zod.string(),
 });
 
 /**
@@ -83,6 +149,45 @@ export const UpdateBarberResponse = zod.object({
   instagram: zod.string().nullish(),
   active: zod.boolean(),
   createdAt: zod.string(),
+});
+
+/**
+ * @summary List all blocked slots
+ */
+export const ListBlockedSlotsQueryParams = zod.object({
+  date: zod.coerce.string().optional().describe("Filter by date (YYYY-MM-DD)"),
+});
+
+export const ListBlockedSlotsResponseItem = zod.object({
+  id: zod.number(),
+  date: zod.string(),
+  time: zod.string().nullish(),
+  reason: zod.string().nullish(),
+  allDay: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListBlockedSlotsResponse = zod.array(ListBlockedSlotsResponseItem);
+
+/**
+ * @summary Block a time slot or full day
+ */
+export const CreateBlockedSlotBody = zod.object({
+  date: zod.string().describe("Date in YYYY-MM-DD format"),
+  time: zod
+    .string()
+    .nullish()
+    .describe(
+      "Specific time slot to block (HH:MM). If null, blocks entire day.",
+    ),
+  reason: zod.string().nullish(),
+  allDay: zod.boolean().optional(),
+});
+
+/**
+ * @summary Remove a blocked slot
+ */
+export const DeleteBlockedSlotParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -164,6 +269,17 @@ export const CreateRecurringAppointmentsBody = zod.object({
     .string()
     .describe("Reference date to determine current month (YYYY-MM-DD)"),
   barberId: zod.string().nullish(),
+});
+
+/**
+ * @summary Export appointments as CSV
+ */
+export const ExportAppointmentsQueryParams = zod.object({
+  period: zod
+    .enum(["day", "week", "month", "all"])
+    .optional()
+    .describe("Period filter"),
+  barberId: zod.coerce.string().optional(),
 });
 
 /**
@@ -283,3 +399,26 @@ export const GetServicesChartResponseItem = zod.object({
   revenue: zod.number(),
 });
 export const GetServicesChartResponse = zod.array(GetServicesChartResponseItem);
+
+/**
+ * @summary Get tomorrow's pending appointments for reminder sending
+ */
+export const GetDashboardRemindersResponseItem = zod.object({
+  id: zod.number(),
+  clientName: zod.string(),
+  clientPhone: zod.string(),
+  serviceId: zod.string(),
+  serviceName: zod.string(),
+  servicePrice: zod.number(),
+  date: zod.string(),
+  time: zod.string(),
+  status: zod.enum(["pending", "completed", "cancelled"]),
+  barberId: zod.string().nullish(),
+  isRecurring: zod.boolean(),
+  recurrenceType: zod.string().nullish(),
+  recurrenceGroupId: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetDashboardRemindersResponse = zod.array(
+  GetDashboardRemindersResponseItem,
+);
