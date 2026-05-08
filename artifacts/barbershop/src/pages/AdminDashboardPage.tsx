@@ -1016,6 +1016,8 @@ function HorariosTab() {
 function LembretesTab() {
   const { data: reminders = [], isLoading, refetch } = useGetDashboardReminders({ query: { queryKey: getGetDashboardRemindersQueryKey() } });
   const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
+  const [sentSet, setSentSet] = useState<Set<number>>(new Set());
+  const [bulkIdx, setBulkIdx] = useState<number | null>(null);
 
   const waLink = (apt: { clientName: string; clientPhone: string; serviceName: string; date: string; time: string }) => {
     const dateStr = apt.date.split("-").reverse().join("/");
@@ -1023,34 +1025,98 @@ function LembretesTab() {
     return `https://wa.me/55${apt.clientPhone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`;
   };
 
+  const markSent = (id: number) => setSentSet(prev => new Set([...prev, id]));
+
   const tomorrow = (() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d.toISOString().split("T")[0].split("-").reverse().join("/");
   })();
 
+  const allSent = reminders.length > 0 && reminders.every(r => sentSet.has(r.id));
+  const sentCount = reminders.filter(r => sentSet.has(r.id)).length;
+
+  const handleBulkNext = () => {
+    const nextIdx = bulkIdx === null ? 0 : bulkIdx + 1;
+    if (nextIdx >= reminders.length) { setBulkIdx(null); return; }
+    const apt = reminders[nextIdx];
+    window.open(waLink(apt), "_blank");
+    markSent(apt.id);
+    setBulkIdx(nextIdx + 1 >= reminders.length ? null : nextIdx);
+  };
+
+  const bulkLabel = (() => {
+    if (allSent) return null;
+    if (bulkIdx === null) return { label: `Enviar para todos (${reminders.length - sentCount})`, next: 0 };
+    const nextIdx = bulkIdx + 1;
+    if (nextIdx >= reminders.length) return null;
+    return { label: `Próximo: ${reminders[nextIdx]?.clientName?.split(" ")[0]} (${sentCount + 1}/${reminders.length})`, next: nextIdx };
+  })();
+
+  const handleReset = () => { setSentSet(new Set()); setBulkIdx(null); };
+  const handleRefetch = () => { refetch(); handleReset(); };
+
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       <SectionHeader
         title="Lembretes"
         action={
-          <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5 rounded-xl gap-2 h-9 text-muted-foreground" onClick={() => refetch()}>
+          <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5 rounded-xl gap-2 h-9 text-muted-foreground" onClick={handleRefetch}>
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </Button>
         }
       />
 
-      {/* Info box */}
+      {/* Info / progress box */}
       <div className="glass-card rounded-2xl p-5 border border-gold/15 bg-gold/3">
-        <div className="flex items-start gap-3">
-          <Bell className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-white mb-1">Agendamentos de amanhã — {tomorrow}</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Abaixo estão todos os agendamentos pendentes para amanhã. Clique em "Enviar Lembrete" para abrir o WhatsApp com a mensagem já pronta — só precisa clicar em Enviar.
+        <div className="flex items-center gap-3 flex-wrap">
+          <Bell className="w-5 h-5 text-gold shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Agendamentos de amanhã — {tomorrow}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              {reminders.length === 0
+                ? "Nenhum agendamento pendente."
+                : allSent
+                ? "Todos os lembretes foram enviados! ✓"
+                : `Cada clique em "Próximo" abre o WhatsApp já preenchido — só confirmar o envio e voltar.`}
             </p>
           </div>
+          {/* Bulk button */}
+          {!isLoading && reminders.length > 0 && !allSent && (
+            <button
+              onClick={handleBulkNext}
+              className="flex items-center gap-2 h-10 px-5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/25 text-sm font-bold transition-all shrink-0 whitespace-nowrap"
+            >
+              <MessageCircle className="w-4 h-4" />
+              {bulkIdx === null
+                ? `Enviar para todos`
+                : `Próximo (${sentCount + 1}/${reminders.length})`}
+            </button>
+          )}
+          {allSent && (
+            <button onClick={handleReset} className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground border border-white/10 text-xs font-semibold transition-colors shrink-0">
+              <RefreshCw className="w-3.5 h-3.5" /> Reiniciar
+            </button>
+          )}
         </div>
+
+        {/* Progress bar */}
+        {reminders.length > 0 && (
+          <div className="mt-4 space-y-1.5">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{sentCount} de {reminders.length} enviados</span>
+              <span>{Math.round((sentCount / reminders.length) * 100)}%</span>
+            </div>
+            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-emerald-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(sentCount / reminders.length) * 100}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -1063,19 +1129,22 @@ function LembretesTab() {
       ) : (
         <div className="space-y-3">
           {reminders.map((apt, i) => {
+            const sent = sentSet.has(apt.id);
+            const isNext = !sent && bulkIdx !== null && reminders[bulkIdx + 1]?.id === apt.id;
             const barberName = apt.barberId ? barbers.find(b => String(b.id) === apt.barberId)?.name ?? `#${apt.barberId}` : "Qualquer disponível";
             return (
               <motion.div key={apt.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                className="glass-card rounded-2xl p-5 border border-white/7 flex items-center gap-4">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-white/6 flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">
-                  {apt.clientName.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}
+                className={`glass-card rounded-2xl p-5 border flex items-center gap-4 transition-all ${sent ? "border-emerald-500/20 bg-emerald-500/3 opacity-70" : isNext ? "border-emerald-500/30 ring-1 ring-emerald-500/20" : "border-white/7"}`}>
+                {/* Status indicator */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all ${sent ? "bg-emerald-500/15 text-emerald-400" : "bg-white/6 text-muted-foreground"}`}>
+                  {sent ? <CheckCircle2 className="w-5 h-5" /> : apt.clientName.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-white text-sm">{apt.clientName}</p>
+                    <p className={`font-semibold text-sm ${sent ? "text-muted-foreground line-through" : "text-white"}`}>{apt.clientName}</p>
                     <span className="text-xs text-muted-foreground">{apt.clientPhone}</span>
+                    {isNext && <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">PRÓXIMO</span>}
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-xs text-muted-foreground">{apt.serviceName}</span>
@@ -1083,17 +1152,21 @@ function LembretesTab() {
                     <span className="text-xs text-muted-foreground/60">{barberName}</span>
                   </div>
                 </div>
-                {/* CTA */}
-                <a href={waLink(apt)} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/18 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors shrink-0 whitespace-nowrap">
-                  <MessageCircle className="w-3.5 h-3.5" /> Enviar Lembrete
-                </a>
+                {/* Individual CTA */}
+                {!sent ? (
+                  <a href={waLink(apt)} target="_blank" rel="noopener noreferrer"
+                    onClick={() => markSent(apt.id)}
+                    className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/18 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors shrink-0 whitespace-nowrap">
+                    <MessageCircle className="w-3.5 h-3.5" /> Enviar
+                  </a>
+                ) : (
+                  <span className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-emerald-500/8 text-emerald-500/60 border border-emerald-500/15 text-xs font-semibold shrink-0 whitespace-nowrap">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Enviado
+                  </span>
+                )}
               </motion.div>
             );
           })}
-          <div className="text-center pt-2">
-            <p className="text-xs text-muted-foreground">{reminders.length} agendamento(s) para amanhã · Clique para abrir o WhatsApp com a mensagem pronta</p>
-          </div>
         </div>
       )}
     </div>
