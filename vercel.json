@@ -1,4 +1,8 @@
 {
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/barbershop run build && mkdir -p dist && cp -r artifacts/barbershop/dist/. dist/",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install",
+  "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/[...slug]" },
     { "source": "/(.*)", "destination": "/index.html" }
