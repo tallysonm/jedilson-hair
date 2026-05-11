@@ -1,10 +1,10 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/barbershop run build",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/barbershop run build",
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "framework": null,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/[...slug]" },
+    { "source": "/api/(.*)", "destination": "/api/[...slug]" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
