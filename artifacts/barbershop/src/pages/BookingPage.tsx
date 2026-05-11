@@ -121,7 +121,12 @@ export default function BookingPage() {
   const selectedBarber  = activeBarbers.find((b) => String(b.id) === barberId);
 
   const handleDateChange = (v: string) => {
-    if (v && new Date(v).getUTCDay() === 1) {
+    if (!v) { setDate(""); setTime(""); return; }
+    if (v > getMaxDate()) {
+      toast({ title: "Data indisponível", description: "Agendamentos disponíveis apenas para os próximos 3 meses.", variant: "destructive" });
+      return;
+    }
+    if (new Date(v + "T12:00:00").getDay() === 1) {
       toast({ title: "Segunda-feira fechado", description: "Escolha outro dia." }); return;
     }
     setDate(v); setTime("");
@@ -522,10 +527,31 @@ export default function BookingPage() {
                           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escolha a data</span>
                         </div>
                         <div className="p-5">
-                          <Input type="date" min={new Date().toISOString().split("T")[0]} max={getMaxDate()}
-                            value={date} onChange={(e) => handleDateChange(e.target.value)}
-                            className="bg-transparent border-none text-white text-2xl font-bold font-display h-auto p-0 focus-visible:ring-0 shadow-none w-full cursor-pointer"
-                            data-testid="input-date" />
+                          {/* Overlay pattern: styled display + invisible native input on top */}
+                          <div className="relative">
+                            <div className="flex items-center gap-3 py-1 pointer-events-none select-none">
+                              <div className="flex-1 min-w-0">
+                                {date ? (
+                                  <p className="text-white text-2xl font-bold font-display leading-tight">
+                                    {new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                                  </p>
+                                ) : (
+                                  <p className="text-muted-foreground text-lg">Toque para escolher</p>
+                                )}
+                              </div>
+                              <CalendarDays className="w-6 h-6 text-accent/60 shrink-0" />
+                            </div>
+                            <input
+                              type="date"
+                              min={new Date().toISOString().split("T")[0]}
+                              max={getMaxDate()}
+                              value={date}
+                              onChange={(e) => handleDateChange(e.target.value)}
+                              data-testid="input-date"
+                              style={{ colorScheme: "dark", fontSize: "16px" }}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
                           {date && (
                             <p className="text-muted-foreground text-sm mt-2 capitalize">
                               {new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}

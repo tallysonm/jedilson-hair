@@ -301,24 +301,10 @@
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-/* Date input — white text + calendar icon on mobile */
-input[type="date"] {
-  color: white;
+/* Date input — dark color scheme so native picker uses dark theme */
+input[type="date"],
+input[type="time"] {
   color-scheme: dark;
-}
-input[type="date"]::-webkit-date-and-time-value {
-  color: white;
-  text-align: left;
-}
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.5);
-  opacity: 0.8;
-  cursor: pointer;
-  width: 1.4em;
-  height: 1.4em;
-}
-input[type="date"]::-webkit-input-placeholder {
-  color: rgba(255,255,255,0.5);
 }
 
 /* Page noise grain — premium texture */
