@@ -3,6 +3,11 @@
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "framework": null,
+  "functions": {
+    "api/[...slug].js": {
+      "includeFiles": "api/app.handler.mjs"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/[...slug]" },
     { "source": "/(.*)", "destination": "/index.html" }

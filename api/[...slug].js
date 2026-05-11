@@ -1,1 +1,1 @@
-export { default } from "../artifacts/api-server/dist/handler/app.handler.mjs";
+export { default } from "./app.handler.mjs";
