@@ -555,7 +555,7 @@ export default function BookingPage() {
                                   {(slotsData?.slots ?? []).map((slot) => (
                                     <motion.button key={slot}
                                       whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-                                      onClick={() => setTime(slot)}
+                                      onClick={() => { setTime(slot); setTimeout(() => setStep(3), 320); }}
                                       className={`h-10 rounded-xl text-xs font-bold border transition-all ${
                                         time === slot
                                           ? "bg-accent border-accent text-white shadow-lg shadow-accent/30"
