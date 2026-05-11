@@ -22,8 +22,40 @@ tags:
     description: Barber management
   - name: blocked-slots
     description: Blocked time slot management
+  - name: settings
+    description: App settings
 
 paths:
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get app settings
+      responses:
+        "200":
+          description: App settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update app settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+
   /healthz:
     get:
       operationId: healthCheck
@@ -906,3 +938,16 @@ components:
         error:
           type: string
       required: [error]
+
+    AppSettings:
+      type: object
+      properties:
+        contactWhatsapp:
+          type: string
+      required: [contactWhatsapp]
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        contactWhatsapp:
+          type: string

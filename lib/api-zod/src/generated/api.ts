@@ -8,6 +8,24 @@
 import * as zod from "zod";
 
 /**
+ * @summary Get app settings
+ */
+export const GetSettingsResponse = zod.object({
+  contactWhatsapp: zod.string(),
+});
+
+/**
+ * @summary Update app settings
+ */
+export const UpdateSettingsBody = zod.object({
+  contactWhatsapp: zod.string().optional(),
+});
+
+export const UpdateSettingsResponse = zod.object({
+  contactWhatsapp: zod.string(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

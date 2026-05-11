@@ -7,6 +7,7 @@ import authRouter from "./auth";
 import dashboardRouter from "./dashboard";
 import barbersRouter from "./barbers";
 import blockedSlotsRouter from "./blocked-slots";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/appointments/recurring", recurringRouter);
 router.use("/appointments", appointmentsRouter);
 router.use("/auth", authRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/settings", settingsRouter);
 
 export default router;

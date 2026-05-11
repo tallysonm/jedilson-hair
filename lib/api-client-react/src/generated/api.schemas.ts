@@ -209,6 +209,14 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface AppSettings {
+  contactWhatsapp: string;
+}
+
+export interface UpdateSettingsBody {
+  contactWhatsapp?: string;
+}
+
 export type ListBlockedSlotsParams = {
   /**
    * Filter by date (YYYY-MM-DD)

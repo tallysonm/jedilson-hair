@@ -8,6 +8,7 @@
 
 export * from "./appointment";
 export * from "./appointmentStatus";
+export * from "./appSettings";
 export * from "./availableSlots";
 export * from "./barber";
 export * from "./blockedSlot";
@@ -37,3 +38,4 @@ export * from "./updateAppointmentBody";
 export * from "./updateAppointmentBodyStatus";
 export * from "./updateBarberBody";
 export * from "./updateServiceBody";
+export * from "./updateSettingsBody";

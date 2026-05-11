@@ -22,6 +22,7 @@ export * from "./generated/types/listAppointmentsStatus";
 export * from "./generated/types/listBlockedSlotsParams";
 // loginBody — conflicts with api.ts, excluded
 export * from "./generated/types/loginResponse";
+export * from "./generated/types/appSettings";
 export * from "./generated/types/recurringAppointmentResult";
 export * from "./generated/types/revenueChartEntry";
 export * from "./generated/types/service";

@@ -16,6 +16,7 @@ import {
   useCreateRecurringAppointments,
   useListBarbers,
   getListBarbersQueryKey,
+  useGetSettings,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { JedilsonLogo } from "@/components/Logo";
@@ -71,7 +72,12 @@ type SuccessData =
   | { type: "single";    serviceName: string; servicePrice: string; serviceDuration: string; date: string; time: string; name: string; barberName: string }
   | { type: "recurring"; created: string[];   skipped: number;     serviceName: string; time: string; name: string };
 
-const WA_PHONE = "5511973436623";
+const FALLBACK_WA = "5511973436623";
+
+function useWaPhone() {
+  const { data } = useGetSettings();
+  return data?.contactWhatsapp || FALLBACK_WA;
+}
 
 /* ════════════════════ Main Page ════════════════════ */
 export default function BookingPage() {
@@ -158,7 +164,8 @@ export default function BookingPage() {
     setName(""); setPhone(""); setSuccessData(null);
   };
 
-  const waMsg = (msg: string) => `https://wa.me/${WA_PHONE}?text=${encodeURIComponent(msg)}`;
+  const waPhone = useWaPhone();
+  const waMsg = (msg: string) => `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
 
   /* ── SUCCESS ── */
   if (successData) {
@@ -727,13 +734,14 @@ export default function BookingPage() {
 /* ══ Sub-components ══ */
 
 function PageHeader({ onAdminClick }: { onAdminClick: () => void }) {
+  const waPhone = useWaPhone();
   return (
     <header className="sticky top-0 z-50 w-full bg-[#080808]/95 backdrop-blur-xl border-b border-white/5">
       <div className="max-w-lg mx-auto px-4 h-16 flex items-center justify-between">
         <JedilsonLogo size="sm" />
         <div className="flex items-center gap-2">
           <a
-            href={`https://wa.me/${WA_PHONE}?text=${encodeURIComponent("Olá! Quero agendar um corte.")}`}
+            href={`https://wa.me/${waPhone}?text=${encodeURIComponent("Olá! Quero agendar um corte.")}`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
             style={{ background: "rgba(34,197,94,0.1)", borderColor: "rgba(34,197,94,0.2)", color: "#4ade80" }}
@@ -752,9 +760,10 @@ function PageHeader({ onAdminClick }: { onAdminClick: () => void }) {
 }
 
 function WhatsAppFAB() {
+  const waPhone = useWaPhone();
   return (
     <motion.a
-      href={`https://wa.me/${WA_PHONE}?text=${encodeURIComponent("Olá! Gostaria de agendar um horário na Jedilson Hair.")}`}
+      href={`https://wa.me/${waPhone}?text=${encodeURIComponent("Olá! Gostaria de agendar um horário na Jedilson Hair.")}`}
       target="_blank" rel="noopener noreferrer"
       className="fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center"
       style={{ background: "#22C55E", boxShadow: "0 4px 28px rgba(34,197,94,0.55)" }}

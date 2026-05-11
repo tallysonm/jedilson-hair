@@ -7,6 +7,7 @@ import {
   MessageCircle, Instagram, Phone, Cake, FileText, Camera,
   ChevronDown, ChevronUp, Bell, Scissors, Ban, Download,
   Tag, Clock, AlertCircle, CalendarOff, RefreshCw, CheckCircle2,
+  Settings,
 } from "lucide-react";
 import {
   useGetDashboardSummary, getGetDashboardSummaryQueryKey,
@@ -24,6 +25,7 @@ import {
   useListBlockedSlots,    getListBlockedSlotsQueryKey,
   useCreateBlockedSlot,   useDeleteBlockedSlot,
   useGetDashboardReminders, getGetDashboardRemindersQueryKey,
+  useGetSettings, getGetSettingsQueryKey, useUpdateSettings,
 } from "@workspace/api-client-react";
 import type { Barber, Service } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,8 +45,6 @@ import timeGridPlugin  from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { JedilsonLogo } from "@/components/Logo";
-
-const WA_PHONE = "5511973436623";
 
 function initials(name: string) {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -70,6 +70,7 @@ export default function AdminDashboardPage() {
     { id: "services",     icon: Scissors,        label: "Serviços" },
     { id: "blocked",      icon: CalendarOff,     label: "Horários Bloqueados" },
     { id: "reminders",    icon: Bell,            label: "Lembretes" },
+    { id: "settings",    icon: Settings,        label: "Configurações" },
   ];
 
   return (
@@ -114,6 +115,7 @@ export default function AdminDashboardPage() {
             {activeTab === "services"     && <ServicosTab />}
             {activeTab === "blocked"      && <HorariosTab />}
             {activeTab === "reminders"    && <LembretesTab />}
+            {activeTab === "settings"     && <ConfiguracoesTab />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -1169,6 +1171,83 @@ function LembretesTab() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   CONFIGURAÇÕES TAB
+══════════════════════════════════════════════ */
+function ConfiguracoesTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: settings, isLoading } = useGetSettings({ query: { queryKey: getGetSettingsQueryKey() } });
+  const { mutate: save, isPending } = useUpdateSettings({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        toast({ title: "Configurações salvas!" });
+      },
+      onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+    },
+  });
+
+  const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    if (settings?.contactWhatsapp) {
+      const raw = settings.contactWhatsapp;
+      const formatted = raw.startsWith("55") ? raw.slice(2) : raw;
+      setPhone(formatted);
+    }
+  }, [settings?.contactWhatsapp]);
+
+  const handleSave = () => {
+    const clean = phone.replace(/\D/g, "");
+    if (!clean) { toast({ title: "Digite um número válido", variant: "destructive" }); return; }
+    const full = clean.startsWith("55") ? clean : `55${clean}`;
+    save({ data: { contactWhatsapp: full } });
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <SectionHeader title="Configurações" />
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+        className="glass-card rounded-2xl p-6 border border-white/7 space-y-6">
+        <div>
+          <h3 className="font-semibold text-white mb-1 flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-emerald-400" />
+            WhatsApp de Contato
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Este número aparece no botão de WhatsApp da página de agendamento e no botão flutuante. Inclua o DDD.
+          </p>
+          {isLoading ? (
+            <div className="h-11 rounded-xl bg-white/5 animate-pulse" />
+          ) : (
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none">+55</span>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="11 97343-6623"
+                  className="pl-10 bg-white/5 border-white/8 h-11 rounded-xl text-sm"
+                />
+              </div>
+              <Button onClick={handleSave} disabled={isPending}
+                className="h-11 px-6 bg-accent hover:bg-accent/90 text-white rounded-xl font-semibold shrink-0">
+                {isPending ? "Salvando…" : "Salvar"}
+              </Button>
+            </div>
+          )}
+          {settings?.contactWhatsapp && (
+            <p className="mt-3 text-xs text-muted-foreground/70">
+              Número atual: +{settings.contactWhatsapp}
+            </p>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }
