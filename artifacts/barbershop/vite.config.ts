@@ -45,6 +45,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     sourcemap: false,
+    reportCompressedSize: false,
   },
   server: {
     port,
