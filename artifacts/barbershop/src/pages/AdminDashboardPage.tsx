@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, CalendarDays, List, PlusCircle, LogOut,
@@ -45,6 +45,7 @@ import timeGridPlugin  from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import { JedilsonLogo } from "@/components/Logo";
+import { uploadBarberPhoto } from "@/lib/supabase";
 
 function initials(name: string) {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -556,6 +557,7 @@ function EditBarberDialog({ barber, onClose, onSave, isPending }: {
   barber: Barber; onClose: () => void;
   onSave: (data: EditState) => void; isPending: boolean;
 }) {
+  const { toast } = useToast();
   const [state, setState] = useState<EditState>({
     name:      barber.name      ?? "",
     photo:     barber.photo     ?? "",
@@ -565,9 +567,27 @@ function EditBarberDialog({ barber, onClose, onSave, isPending }: {
     specialty: barber.specialty ?? "",
     instagram: barber.instagram ?? "",
   });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof EditState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setState((prev) => ({ ...prev, [k]: e.target.value }));
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadBarberPhoto(file, barber.id);
+      setState((prev) => ({ ...prev, photo: url }));
+      toast({ title: "Foto enviada com sucesso!" });
+    } catch (err) {
+      toast({ title: "Erro ao enviar foto", description: String(err), variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [barber.id, toast]);
 
   const inputClass = "bg-white/5 border border-white/8 h-10 rounded-xl text-white text-sm px-3 w-full focus:outline-none focus:border-accent/40 transition-colors placeholder:text-muted-foreground";
 
@@ -579,16 +599,52 @@ function EditBarberDialog({ barber, onClose, onSave, isPending }: {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Photo preview */}
-          {state.photo && (
-            <div className="flex justify-center">
-              <img src={state.photo} alt="Preview" className="w-24 h-24 rounded-2xl object-cover border border-white/10" onError={(e) => (e.currentTarget.style.display = "none")} />
-            </div>
-          )}
+          {/* Photo upload zone */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5" />Foto do Barbeiro
+            </label>
+            <div className="flex items-center gap-4">
+              {/* Clickable avatar */}
+              <div
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                className="relative w-20 h-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] cursor-pointer group"
+              >
+                {state.photo ? (
+                  <img src={state.photo} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="font-display font-bold text-xl text-muted-foreground">{initials(barber.name)}</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  {uploading
+                    ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <Camera className="w-5 h-5 text-white" />}
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Camera className="w-3.5 h-3.5" />URL da Foto</label>
-            <input value={state.photo} onChange={set("photo")} placeholder="https://exemplo.com/foto.jpg" className={inputClass} />
+              {/* Upload button + URL override */}
+              <div className="flex-1 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-xs font-semibold text-muted-foreground hover:text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {uploading
+                    ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Enviando...</>
+                    : <><Camera className="w-3.5 h-3.5" />Fazer Upload</>}
+                </button>
+                <input
+                  value={state.photo}
+                  onChange={set("photo")}
+                  placeholder="ou cole uma URL..."
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
