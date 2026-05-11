@@ -4,6 +4,7 @@
   "installCommand": "pnpm install",
   "framework": null,
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/:path*", "destination": "/api/[...slug]" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
