@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { appointmentsTable } from "@workspace/db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -20,6 +20,12 @@ function getMonthRange() {
   const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
   return { start, end };
+}
+
+function getNDaysAgoStr(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split("T")[0];
 }
 
 router.get("/summary", async (_req, res) => {
@@ -47,46 +53,70 @@ router.get("/summary", async (_req, res) => {
 });
 
 router.get("/revenue-chart", async (_req, res) => {
-  const now = new Date();
+  const startDate = getNDaysAgoStr(29);
+  const today = getTodayStr();
+
+  // Single query: group by date for the last 30 days
+  const rows = await db
+    .select({
+      date: appointmentsTable.date,
+      revenue: sql<number>`SUM(CAST(${appointmentsTable.servicePrice} AS NUMERIC))`,
+      appointments: sql<number>`COUNT(*)`,
+    })
+    .from(appointmentsTable)
+    .where(
+      and(
+        gte(appointmentsTable.date, startDate),
+        lte(appointmentsTable.date, today),
+        eq(appointmentsTable.status, "completed"),
+      )
+    )
+    .groupBy(appointmentsTable.date)
+    .orderBy(appointmentsTable.date);
+
+  // Build a map for quick lookup
+  const dataMap = new Map<string, { revenue: number; appointments: number }>();
+  for (const r of rows) {
+    dataMap.set(r.date, { revenue: Number(r.revenue), appointments: Number(r.appointments) });
+  }
+
+  // Fill in all 30 days (including days with zero activity)
   const result = [];
-
   for (let i = 29; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
+    const d = new Date();
+    d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-
-    const rows = await db
-      .select()
-      .from(appointmentsTable)
-      .where(and(eq(appointmentsTable.date, dateStr), eq(appointmentsTable.status, "completed")));
-
-    const revenue = rows.reduce((sum, r) => sum + Number(r.servicePrice), 0);
-    result.push({ date: dateStr, revenue, appointments: rows.length });
+    const entry = dataMap.get(dateStr);
+    result.push({
+      date: dateStr,
+      revenue: entry?.revenue ?? 0,
+      appointments: entry?.appointments ?? 0,
+    });
   }
 
   res.json(result);
 });
 
 router.get("/services-chart", async (_req, res) => {
+  // Single query: group by service
   const rows = await db
-    .select()
+    .select({
+      serviceId: appointmentsTable.serviceId,
+      serviceName: appointmentsTable.serviceName,
+      count: sql<number>`COUNT(*)`,
+      revenue: sql<number>`SUM(CAST(${appointmentsTable.servicePrice} AS NUMERIC))`,
+    })
     .from(appointmentsTable)
-    .where(eq(appointmentsTable.status, "completed"));
+    .where(eq(appointmentsTable.status, "completed"))
+    .groupBy(appointmentsTable.serviceId, appointmentsTable.serviceName)
+    .orderBy(sql`COUNT(*) DESC`);
 
-  const map = new Map<string, { serviceId: string; serviceName: string; count: number; revenue: number }>();
-
-  for (const r of rows) {
-    const existing = map.get(r.serviceId);
-    if (existing) {
-      existing.count++;
-      existing.revenue += Number(r.servicePrice);
-    } else {
-      map.set(r.serviceId, { serviceId: r.serviceId, serviceName: r.serviceName, count: 1, revenue: Number(r.servicePrice) });
-    }
-  }
-
-  const result = Array.from(map.values()).sort((a, b) => b.count - a.count);
-  res.json(result);
+  res.json(rows.map(r => ({
+    serviceId: r.serviceId,
+    serviceName: r.serviceName,
+    count: Number(r.count),
+    revenue: Number(r.revenue),
+  })));
 });
 
 router.get("/reminders", async (_req, res) => {
