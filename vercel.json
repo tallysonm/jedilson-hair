@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/barbershop run build && mkdir -p dist && cp -r artifacts/barbershop/dist/. dist/",
+  "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "framework": null,
