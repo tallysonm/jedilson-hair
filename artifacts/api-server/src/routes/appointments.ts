@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { appointmentsTable, blockedSlotsTable, servicesTable } from "@workspace/db";
+import { appointmentsTable, blockedSlotsTable, servicesTable, barbersTable } from "@workspace/db";
 import {
   ListAppointmentsQueryParams,
   CreateAppointmentBody,
@@ -160,6 +160,10 @@ router.get("/export", async (req, res) => {
     ? await db.select().from(appointmentsTable).where(and(...conditions)).orderBy(appointmentsTable.date, appointmentsTable.time)
     : await db.select().from(appointmentsTable).orderBy(appointmentsTable.date, appointmentsTable.time);
 
+  // Build barber name lookup
+  const allBarbers = await db.select({ id: barbersTable.id, name: barbersTable.name }).from(barbersTable);
+  const barberMap = new Map(allBarbers.map(b => [String(b.id), b.name]));
+
   const statusLabel = (s: string) => s === "completed" ? "Concluído" : s === "cancelled" ? "Cancelado" : "Pendente";
 
   const header = "ID,Cliente,Telefone,Serviço,Preço,Data,Horário,Barbeiro,Status,Recorrente\n";
@@ -172,7 +176,7 @@ router.get("/export", async (req, res) => {
       Number(r.servicePrice).toFixed(2),
       r.date,
       r.time,
-      `"${r.barberId ?? ""}"`,
+      `"${r.barberId ? (barberMap.get(r.barberId) ?? r.barberId) : ""}"`,
       statusLabel(r.status),
       r.isRecurring ? "Sim" : "Não",
     ].join(",")

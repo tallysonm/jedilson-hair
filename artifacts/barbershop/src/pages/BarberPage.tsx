@@ -24,8 +24,6 @@ export default function BarberPage() {
     ? `https://wa.me/55${barber.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${barber.name}! Vi seu perfil e gostaria de agendar.`)}`
     : `https://wa.me/${WA_PHONE}?text=${encodeURIComponent(`Olá! Gostaria de agendar com ${barber?.name ?? "vocês"}.`)}`;
 
-  const bookingLink = `/?barbeiro=${id}`;
-
   if (isNaN(id) || isError) {
     return (
       <div className="min-h-screen bg-[#080808] flex items-center justify-center p-8">
