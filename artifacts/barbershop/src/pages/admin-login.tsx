@@ -35,7 +35,7 @@ export default function AdminLogin() {
       <Card className="w-full max-w-md bg-card border-border shadow-2xl">
         <CardHeader className="space-y-1 text-center pb-6">
           <CardTitle className="text-2xl font-serif tracking-wider uppercase text-primary">Acesso Restrito</CardTitle>
-          <p className="text-sm text-muted-foreground">Gedilson Rai Barbershop</p>
+          <p className="text-sm text-muted-foreground">Jedilson Hair</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
