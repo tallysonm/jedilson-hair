@@ -164,7 +164,9 @@ export default function BookingPage() {
   };
 
   const resetForm = () => {
-    setStep(0); setServiceId(""); setBarberId("all"); setIsRecurring(false);
+    setStep(0); setServiceId("");
+    setBarberId(activeBarbers.length === 1 ? String(activeBarbers[0].id) : "all");
+    setIsRecurring(false);
     setDate(""); setTime(""); setWeekday("4"); setPeriod("this_month");
     setName(""); setPhone(""); setSuccessData(null);
   };
@@ -414,7 +416,15 @@ export default function BookingPage() {
                         transition={{ delay: i * 0.025, duration: 0.3 }}
                         whileHover={{ scale: 1.015, y: -1 }}
                         whileTap={{ scale: 0.985 }}
-                        onClick={() => { setServiceId(s.id); setTime(""); setStep(1); }}
+                        onClick={() => {
+                          setServiceId(s.id); setTime("");
+                          if (activeBarbers.length === 1) {
+                            setBarberId(String(activeBarbers[0].id));
+                            setStep(2);
+                          } else {
+                            setStep(1);
+                          }
+                        }}
                         className={`relative text-left rounded-2xl overflow-hidden border transition-all group ${
                           selected
                             ? "border-gold/30 shadow-lg shadow-yellow-900/15"
@@ -464,16 +474,20 @@ export default function BookingPage() {
                   <BackButton onClick={() => setStep(0)} />
                   <div>
                     <h1 className="font-display text-2xl font-bold text-white">Escolha o barbeiro</h1>
-                    <p className="text-muted-foreground text-sm mt-0.5">Ou deixe-nos escolher para você</p>
+                    {activeBarbers.length > 1 && (
+                      <p className="text-muted-foreground text-sm mt-0.5">Ou deixe-nos escolher para você</p>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <BarberOptionCard
-                    name="Qualquer" subtitle="Primeiro disponível"
-                    photo={null} selected={barberId === "all"}
-                    onSelect={() => { setBarberId("all"); setStep(2); }}
-                    isAny
-                  />
+                  {activeBarbers.length > 1 && (
+                    <BarberOptionCard
+                      name="Qualquer" subtitle="Primeiro disponível"
+                      photo={null} selected={barberId === "all"}
+                      onSelect={() => { setBarberId("all"); setStep(2); }}
+                      isAny
+                    />
+                  )}
                   {activeBarbers.map((b) => (
                     <BarberOptionCard
                       key={b.id}
