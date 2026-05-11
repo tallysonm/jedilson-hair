@@ -262,10 +262,20 @@ router.post("/", async (req, res) => {
   const newStart = timeToMinutes(time);
   const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
 
+  const barberId = typeof (req.body as Record<string, unknown>)["barberId"] === "string"
+    ? (req.body as Record<string, unknown>)["barberId"] as string
+    : null;
+
+  // When a specific barber is requested, only check that barber's slots.
+  // When no barber is specified ("any available"), check all unassigned + all barbers
+  // to avoid double-booking the same generic slot.
+  const conflictConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+  if (barberId) conflictConditions.push(eq(appointmentsTable.barberId, barberId));
+
   const sameDayPending = await db
-    .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
+    .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId, barberId: appointmentsTable.barberId })
     .from(appointmentsTable)
-    .where(and(eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")));
+    .where(and(...conflictConditions));
 
   const hasOverlap = (await Promise.all(sameDayPending.map(async b => {
     const existingService = await getServiceFromDb(b.serviceId);
@@ -279,10 +289,6 @@ router.post("/", async (req, res) => {
     res.status(409).json({ error: "Horário indisponível" });
     return;
   }
-
-  const barberId = typeof (req.body as Record<string, unknown>)["barberId"] === "string"
-    ? (req.body as Record<string, unknown>)["barberId"] as string
-    : null;
 
   const [created] = await db.insert(appointmentsTable).values({
     clientName,

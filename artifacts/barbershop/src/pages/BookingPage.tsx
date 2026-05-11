@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import {
   MessageCircle, CheckCircle2, RefreshCw,
   CalendarDays, ArrowLeft, Clock, Check, Repeat2,
@@ -76,12 +76,21 @@ const WA_PHONE = "5511973436623";
 /* ════════════════════ Main Page ════════════════════ */
 export default function BookingPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
 
   const [step, setStep]               = useState(0);
   const [serviceId, setServiceId]     = useState("");
   const [barberId, setBarberId]       = useState("all");
   const [isRecurring, setIsRecurring] = useState(false);
+
+  // Pre-select barber when arriving from /barbeiro/:id
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const bid = params.get("barberId");
+    if (bid) setBarberId(bid);
+  }, [search]);
+
   const [date, setDate]               = useState("");
   const [time, setTime]               = useState("");
   const [weekday, setWeekday]         = useState("4");
