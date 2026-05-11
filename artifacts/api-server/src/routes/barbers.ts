@@ -6,9 +6,7 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 const DEFAULT_BARBERS = [
-  { name: "Jedilson", photo: null, active: true, specialty: "Cortes & Barba" },
-  { name: "Barbeiro 2", photo: null, active: true, specialty: "Cortes Clássicos" },
-  { name: "Barbeiro 3", photo: null, active: true, specialty: "Penteados" },
+  { name: "Jedilson", photo: null, phone: "(11) 97343-6623", active: true, specialty: "Cortes & Barba" },
 ];
 
 async function seedBarbers() {
@@ -62,6 +60,16 @@ router.post("/", async (req, res) => {
     .values({ name, photo: photo ?? null, phone: phone ?? null, specialty: specialty ?? null, active: true })
     .returning();
   res.status(201).json(formatBarber(created));
+});
+
+router.delete("/:id", async (req, res) => {
+  const id = parseInt(req.params["id"] ?? "");
+  if (isNaN(id)) {
+    res.status(400).json({ error: "ID inválido" });
+    return;
+  }
+  await db.delete(barbersTable).where(eq(barbersTable.id, id));
+  res.status(204).send();
 });
 
 router.patch("/:id", async (req, res) => {
