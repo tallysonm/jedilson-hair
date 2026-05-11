@@ -1,0 +1,7 @@
+attached_assets/
+artifacts/barbershop/node_modules/
+artifacts/api-server/node_modules/
+artifacts/mockup-sandbox/
+lib/*/node_modules/
+scripts/
+.local/
