@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/barbershop run build",
-  "outputDirectory": "dist",
+  "outputDirectory": "artifacts/barbershop/dist",
   "installCommand": "pnpm install",
   "framework": null,
   "rewrites": [
