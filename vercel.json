@@ -1,7 +1,7 @@
 {
-  "buildCommand": "bash vercel-build.sh",
+  "buildCommand": "node vercel-build.mjs",
   "outputDirectory": "dist",
-  "installCommand": "echo 'install runs in vercel-build.sh'",
+  "installCommand": "echo 'install runs in vercel-build.mjs'",
   "framework": null,
   "functions": {
     "api/[...slug].js": {
