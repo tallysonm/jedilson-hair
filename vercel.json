@@ -1,15 +1,16 @@
 {
-  "buildCommand": "pnpm install && OUTDIR=$(pwd)/dist && pnpm --filter @workspace/barbershop exec vite build --config vite.config.ts --outDir $OUTDIR --emptyOutDir",
+  "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "dist",
-  "installCommand": "echo 'install runs in buildCommand'",
+  "installCommand": "echo 'install runs in vercel-build.sh'",
   "framework": null,
   "functions": {
     "api/[...slug].js": {
       "includeFiles": "api/app.handler.mjs"
     }
   },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/[...slug]" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...slug]" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

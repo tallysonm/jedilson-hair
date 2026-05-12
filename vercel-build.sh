@@ -1,28 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "=== Node.js version ==="
-node --version
+PROJECT_ROOT="$(pwd)"
+echo "[vercel-build] Project root: $PROJECT_ROOT"
 
-echo "=== pnpm version ==="
-pnpm --version
+# Install all workspace dependencies
+pnpm install
+echo "[vercel-build] Dependencies installed"
 
-echo "=== Building API Server ==="
-pnpm --filter @workspace/api-server run build
-
-echo "=== Copying API bundle into api/ folder ==="
-cp artifacts/api-server/dist/handler/app.handler.mjs api/app.handler.mjs
-echo "  api/app.handler.mjs copied ($(du -sh api/app.handler.mjs | cut -f1))"
-
-echo "=== Building Frontend ==="
+# Build frontend — Vite outputs to artifacts/barbershop/dist per vite.config.ts
 pnpm --filter @workspace/barbershop run build
+echo "[vercel-build] Vite build complete"
 
-echo "=== Copying frontend to root dist/ ==="
-mkdir -p dist
-cp -r artifacts/barbershop/dist/. dist/
-
-echo "=== Build complete ==="
-echo "dist/ contents:"
-ls dist/
-echo "api/ contents:"
-ls api/
+# Copy to root dist/ so Vercel finds it
+rm -rf "${PROJECT_ROOT}/dist"
+cp -r artifacts/barbershop/dist "${PROJECT_ROOT}/dist"
+echo "[vercel-build] Copied to dist/"
+ls "${PROJECT_ROOT}/dist"
