@@ -1,0 +1,1 @@
+{"version":3,"file":"getAvailableSlotsParams.d.ts","sourceRoot":"","sources":["../../../src/generated/types/getAvailableSlotsParams.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,MAAM,uBAAuB,GAAG;IACpC;;OAEG;IACH,IAAI,EAAE,MAAM,CAAC;IACb;;OAEG;IACH,SAAS,EAAE,MAAM,CAAC;IAClB;;OAEG;IACH,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB,CAAC"}

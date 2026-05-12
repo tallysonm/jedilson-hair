@@ -1,0 +1,1 @@
+{"version":3,"file":"createBlockedSlotBody.d.ts","sourceRoot":"","sources":["../../../src/generated/types/createBlockedSlotBody.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,WAAW,qBAAqB;IACpC,gCAAgC;IAChC,IAAI,EAAE,MAAM,CAAC;IACb,uEAAuE;IACvE,IAAI,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IACrB,MAAM,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IACvB,MAAM,CAAC,EAAE,OAAO,CAAC;CAClB"}
