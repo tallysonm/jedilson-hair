@@ -1,7 +1,7 @@
 {
-  "buildCommand": "echo 'All files pre-built and committed — nothing to compile'",
+  "buildCommand": "echo 'Using pre-built files'",
   "outputDirectory": "dist",
-  "installCommand": "echo 'No install needed'",
+  "installCommand": "pnpm install",
   "framework": null,
   "functions": {
     "api/[...slug].js": {
