@@ -1,7 +1,7 @@
 {
-  "buildCommand": "pnpm --filter @workspace/api-server run build && cp artifacts/api-server/dist/handler/app.handler.mjs api/app.handler.mjs",
+  "buildCommand": "echo 'All files pre-built and committed — nothing to compile'",
   "outputDirectory": "dist",
-  "installCommand": "pnpm install",
+  "installCommand": "echo 'No install needed'",
   "framework": null,
   "functions": {
     "api/[...slug].js": {
