@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter @workspace/barbershop run build && cp -r artifacts/barbershop/dist dist",
+  "buildCommand": "pnpm install && cd artifacts/barbershop && npx vite build --config vite.config.ts --outDir ../../dist --emptyOutDir",
   "outputDirectory": "dist",
   "installCommand": "echo 'install runs in buildCommand'",
   "framework": null,
