@@ -1,0 +1,16 @@
+{
+  "buildCommand": "cd ../../ && pnpm install && pnpm --filter @workspace/barbershop run build",
+  "outputDirectory": "dist",
+  "installCommand": "echo 'install runs in buildCommand'",
+  "framework": null,
+  "functions": {
+    "api/[...slug].js": {
+      "includeFiles": "api/app.handler.mjs"
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...slug]" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
