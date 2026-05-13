@@ -107,7 +107,9 @@ export default function BookingPage() {
 
   const { data: services = [] } = useListServices();
   const { data: barbers  = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
-  const activeBarbers = barbers.filter((b) => b.active);
+  const activeBarbers = Array.isArray(barbers)
+  ? barbers.filter((b) => b.active)
+  : []
 
   const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(slotParams, {
@@ -117,7 +119,9 @@ export default function BookingPage() {
   const createRecurringMutation = useCreateRecurringAppointments();
   const isPending = createMutation.isPending || createRecurringMutation.isPending;
 
-  const selectedService = services.find((s) => s.id === serviceId);
+  const safeServices = Array.isArray(services) ? services : [];
+  console.log("SERVICES:", services, "SAFE:", safeServices);
+const selectedService = safeServices.find((s) => s.id === serviceId);
   const selectedBarber  = activeBarbers.find((b) => String(b.id) === barberId);
 
   const handleDateChange = (v: string) => {
@@ -405,7 +409,7 @@ export default function BookingPage() {
 
                 {/* Service grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {services.map((s, i) => {
+                  {safeServices.map((s, i) => {
                     const selected = serviceId === s.id;
                     const color = SVC_COLORS[i % SVC_COLORS.length];
                     return (

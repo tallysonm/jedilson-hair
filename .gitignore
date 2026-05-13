@@ -46,3 +46,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+node_modules
+.env
+dist
+package-lock.json
