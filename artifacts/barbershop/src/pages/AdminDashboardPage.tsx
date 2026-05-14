@@ -20,7 +20,7 @@ import {
   useCreateAppointment,
   useGetAvailableSlots,   getGetAvailableSlotsQueryKey,
   useListBarbers,         getListBarbersQueryKey,
-  useCreateBarber,        useUpdateBarber,
+  useCreateBarber,        useUpdateBarber,               
   useCreateRecurringAppointments,
   useListBlockedSlots,    getListBlockedSlotsQueryKey,
   useCreateBlockedSlot,   useDeleteBlockedSlot,
@@ -454,7 +454,7 @@ type EditState = {
   bio: string; specialty: string; instagram: string;
 };
 
-function BarberProfileCard({ barber, idx, onEdit, onToggle }: { barber: Barber; idx: number; onEdit: () => void; onToggle: () => void }) {
+function BarberProfileCard({ barber, idx, onEdit, onToggle }: { barber: Barber; idx: number; onEdit: () => void; onToggle: () => void}) {
   const [expanded, setExpanded] = useState(false);
   const bgClass  = AVATAR_BG[idx % AVATAR_BG.length];
   const txtClass = AVATAR_TEXT[idx % AVATAR_TEXT.length];
@@ -661,10 +661,25 @@ function EditBarberDialog({ barber, onClose, onSave, isPending }: {
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Especialidade</label>
             <div className="relative">
-              <select value={state.specialty} onChange={set("specialty")} className={`${inputClass} appearance-none pr-8`}>
-                <option value="">— Selecione ou deixe em branco —</option>
-                {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <select
+  value={state.specialty}
+  onChange={set("specialty")}
+  className={`${inputClass} appearance-none pr-8 bg-[#111] text-white`}
+>
+  <option value="" style={{ backgroundColor: "#111", color: "white" }}>
+    — Selecione ou deixe em branco —
+  </option>
+
+  {SPECIALTIES.map((s) => (
+    <option
+      key={s}
+      value={s}
+      style={{ backgroundColor: "#111", color: "white" }}
+    >
+      {s}
+    </option>
+  ))}
+</select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
@@ -715,7 +730,6 @@ function BarbeirosTab() {
   const [editTarget, setEditTarget] = useState<Barber | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getListBarbersQueryKey() });
-
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
