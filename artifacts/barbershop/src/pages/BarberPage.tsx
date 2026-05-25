@@ -180,7 +180,7 @@ export default function BarberPage() {
               <Star className="w-3 h-3 text-gold" fill="currentColor" />
             </div>
             <p className="text-xs text-muted-foreground/50">R. Mademoiselle - Helena Maria, Osasco - SP</p>
-            <p className="text-xs text-muted-foreground/50">Ter–Sáb 07h–20h · Dom 07h–14h · Seg: Fechado</p>
+            <p className="text-xs text-muted-foreground/50">Ter–Sáb 06h30–21h · Dom 06h30–12h30 · Seg: Fechado</p>
           </motion.div>
         </div>
       </main>

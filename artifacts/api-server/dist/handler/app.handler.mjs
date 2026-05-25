@@ -56259,7 +56259,7 @@ function generateTimeSlots(openHour, closeHour, durationMinutes) {
   const slots = [];
   let current = openHour * 60;
   const close = closeHour * 60;
-  while (current + durationMinutes + BUFFER_MINUTES <= close) {
+  while (current <= close - 30) {
     slots.push(minutesToTime(current));
     current += 30;
   }
@@ -56269,8 +56269,8 @@ function getOpeningHours(dateStr) {
   const d = /* @__PURE__ */ new Date(dateStr + "T12:00:00");
   const day = d.getDay();
   if (day === 1) return null;
-  if (day === 0) return { open: 7, close: 14 };
-  return { open: 7, close: 20 };
+  if (day === 0) return { open: 6.5, close: 12.5 };
+  return { open: 6.5, close: 21 };
 }
 async function getServiceFromDb(serviceId) {
   const [svc] = await db.select().from(servicesTable).where(eq(servicesTable.id, serviceId));
@@ -56522,8 +56522,8 @@ function getOpeningHours2(dateStr) {
   const d = /* @__PURE__ */ new Date(dateStr + "T12:00:00");
   const day = d.getDay();
   if (day === 1) return null;
-  if (day === 0) return { open: 7, close: 14 };
-  return { open: 7, close: 20 };
+  if (day === 0) return { open: 6.5, close: 12.5 };
+  return { open: 6.5, close: 21 };
 }
 function getMaxAllowedDate2() {
   const now = /* @__PURE__ */ new Date();

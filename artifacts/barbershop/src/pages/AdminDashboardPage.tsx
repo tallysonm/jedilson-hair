@@ -268,7 +268,7 @@ function CalendarTab() {
       <div className="glass-card rounded-2xl p-5 overflow-hidden" style={{ height: "calc(100% - 72px)" }}>
         <FullCalendar plugins={[dayGridPlugin,timeGridPlugin,interactionPlugin]} initialView="timeGridWeek"
           headerToolbar={{ left:"prev,next today", center:"title", right:"timeGridWeek,timeGridDay" }}
-          locale={ptBrLocale} slotMinTime="07:00:00" slotMaxTime="21:00:00"
+          locale={ptBrLocale} slotMinTime="06:30:00" slotMaxTime="21:00:00"
           events={events} eventContent={renderEventContent}
           eventClick={(info)=>setSelectedEvent(info.event.extendedProps as Record<string,unknown>)}
           height="100%" eventMinHeight={36} nowIndicator allDaySlot={false} />

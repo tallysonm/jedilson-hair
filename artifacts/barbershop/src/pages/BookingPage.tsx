@@ -389,7 +389,7 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
                       className="flex items-center gap-4 justify-center flex-wrap">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Clock className="w-3 h-3 text-accent/70" />
-                        Ter–Sáb 07h–20h · Dom 07h–14h
+                        Ter–Sáb 06h30–21h · Dom 06h30–12h30
                       </span>
                       <span className="text-white/10 hidden sm:inline">|</span>
                       <a href="tel:+5511973436623" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-white transition-colors">
@@ -837,7 +837,7 @@ function InfoFooter() {
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="w-3.5 h-3.5 text-accent shrink-0" />
-          <span>Ter–Sáb 07h–20h · Dom 07h–14h · Seg fechado</span>
+          <span>Ter–Sáb 06h30–21h · Dom 06h30–12h30 · Seg fechado</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Phone className="w-3.5 h-3.5 text-accent shrink-0" />

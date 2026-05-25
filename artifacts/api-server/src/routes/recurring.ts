@@ -15,9 +15,13 @@ function timeToMinutes(t: string): number {
 function getOpeningHours(dateStr: string): { open: number; close: number } | null {
   const d = new Date(dateStr + "T12:00:00");
   const day = d.getDay();
-  if (day === 1) return null;
-  if (day === 0) return { open: 7, close: 14 };
-  return { open: 7, close: 20 };
+if (day === 1) return null;
+
+// Domingo: 06:30 às 12:30
+if (day === 0) return { open: 6.5, close: 12.5 };
+
+// Terça a sábado: 06:30 às 21:00
+return { open: 6.5, close: 21 };
 }
 
 function getMaxAllowedDate(): string {
