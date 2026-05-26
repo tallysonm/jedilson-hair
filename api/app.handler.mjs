@@ -56437,6 +56437,7 @@ router3.post("/", async (req, res) => {
     serviceId,
     serviceName: service.name,
     servicePrice: service.price,
+    paymentMethod,
     date: date6,
     time: time4,
     barberId,
