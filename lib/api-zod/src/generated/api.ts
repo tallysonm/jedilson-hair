@@ -231,6 +231,7 @@ export const ListAppointmentsResponseItem = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
+  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
@@ -251,6 +252,7 @@ export const CreateAppointmentBody = zod.object({
   serviceId: zod.string(),
   date: zod.string(),
   time: zod.string(),
+  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
   barberId: zod.string().nullish(),
 });
 
@@ -279,6 +281,7 @@ export const CreateRecurringAppointmentsBody = zod.object({
   clientPhone: zod.string(),
   serviceId: zod.string(),
   time: zod.string(),
+  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
   weekday: zod
     .number()
     .describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
@@ -321,6 +324,7 @@ export const GetAppointmentResponse = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
+  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
@@ -342,6 +346,7 @@ export const UpdateAppointmentBody = zod.object({
   status: zod.enum(["pending", "completed", "cancelled"]).optional(),
   clientName: zod.string().optional(),
   clientPhone: zod.string().optional(),
+  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
   serviceId: zod.string().optional(),
   date: zod.string().optional(),
   time: zod.string().optional(),
@@ -355,6 +360,7 @@ export const UpdateAppointmentResponse = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
+  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
@@ -428,6 +434,7 @@ export const GetDashboardRemindersResponseItem = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
+  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),

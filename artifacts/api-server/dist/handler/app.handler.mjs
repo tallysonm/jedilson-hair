@@ -37531,6 +37531,7 @@ var ListAppointmentsResponseItem = objectType({
   serviceId: stringType(),
   serviceName: stringType(),
   servicePrice: numberType(),
+  paymentMethod: stringType().nullish(),
   date: stringType(),
   time: stringType(),
   status: enumType(["pending", "completed", "cancelled"]),
@@ -37547,6 +37548,7 @@ var CreateAppointmentBody = objectType({
   serviceId: stringType(),
   date: stringType(),
   time: stringType(),
+  paymentMethod: enumType(["dinheiro", "pix_cartao"]).optional(),
   barberId: stringType().nullish()
 });
 var GetAvailableSlotsQueryParams = objectType({
@@ -37563,6 +37565,7 @@ var CreateRecurringAppointmentsBody = objectType({
   clientPhone: stringType(),
   serviceId: stringType(),
   time: stringType(),
+  paymentMethod: enumType(["dinheiro", "pix_cartao"]).optional(),
   weekday: numberType().describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
   period: enumType(["this_month", "next_2_months"]),
   startDate: stringType().describe("Reference date to determine current month (YYYY-MM-DD)"),
@@ -37585,6 +37588,7 @@ var GetAppointmentResponse = objectType({
   serviceId: stringType(),
   serviceName: stringType(),
   servicePrice: numberType(),
+  paymentMethod: stringType().nullish(),
   date: stringType(),
   time: stringType(),
   status: enumType(["pending", "completed", "cancelled"]),
@@ -37601,6 +37605,7 @@ var UpdateAppointmentBody = objectType({
   status: enumType(["pending", "completed", "cancelled"]).optional(),
   clientName: stringType().optional(),
   clientPhone: stringType().optional(),
+  paymentMethod: enumType(["dinheiro", "pix_cartao"]).optional(),
   serviceId: stringType().optional(),
   date: stringType().optional(),
   time: stringType().optional(),
@@ -37613,6 +37618,7 @@ var UpdateAppointmentResponse = objectType({
   serviceId: stringType(),
   serviceName: stringType(),
   servicePrice: numberType(),
+  paymentMethod: stringType().nullish(),
   date: stringType(),
   time: stringType(),
   status: enumType(["pending", "completed", "cancelled"]),
@@ -37661,6 +37667,7 @@ var GetDashboardRemindersResponseItem = objectType({
   serviceId: stringType(),
   serviceName: stringType(),
   servicePrice: numberType(),
+  paymentMethod: stringType().nullish(),
   date: stringType(),
   time: stringType(),
   status: enumType(["pending", "completed", "cancelled"]),
@@ -56058,6 +56065,7 @@ var appointmentsTable = pgTable("appointments", {
   serviceId: text("service_id").notNull(),
   serviceName: text("service_name").notNull(),
   servicePrice: numeric("service_price", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method"),
   date: text("date").notNull(),
   time: text("time").notNull(),
   status: text("status", { enum: ["pending", "completed", "cancelled"] }).notNull().default("pending"),
@@ -56340,7 +56348,7 @@ router3.get("/export", async (req, res) => {
   const allBarbers = await db.select({ id: barbersTable.id, name: barbersTable.name }).from(barbersTable);
   const barberMap = new Map(allBarbers.map((b) => [String(b.id), b.name]));
   const statusLabel = (s) => s === "completed" ? "Conclu\xEDdo" : s === "cancelled" ? "Cancelado" : "Pendente";
-  const header = "ID,Cliente,Telefone,Servi\xE7o,Pre\xE7o,Data,Hor\xE1rio,Barbeiro,Status,Recorrente\n";
+  const header = "ID,Cliente,Telefone,Servi\xE7o,Pre\xE7o,Data,Hor\xE1rio,Barbeiro,Pagamento,Status,Recorrente\n";
   const lines = rows.map(
     (r) => [
       r.id,
@@ -56351,6 +56359,7 @@ router3.get("/export", async (req, res) => {
       r.date,
       r.time,
       `"${r.barberId ? barberMap.get(r.barberId) ?? r.barberId : ""}"`,
+      `"${r.paymentMethod ?? ""}"`,
       statusLabel(r.status),
       r.isRecurring ? "Sim" : "N\xE3o"
     ].join(",")
@@ -56394,7 +56403,7 @@ router3.post("/", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { clientName, clientPhone, serviceId, date: date6, time: time4 } = parsed.data;
+  const { clientName, clientPhone, serviceId, date: date6, time: time4, paymentMethod } = parsed.data;
   if (date6 > getMaxAllowedDate()) {
     res.status(400).json({ error: "Data indispon\xEDvel para agendamento" });
     return;
@@ -56437,6 +56446,7 @@ router3.post("/", async (req, res) => {
     serviceId,
     serviceName: service.name,
     servicePrice: service.price,
+    paymentMethod,
     date: date6,
     time: time4,
     barberId,
@@ -56473,6 +56483,7 @@ router3.patch("/:id", async (req, res) => {
   if (body.status !== void 0) updates.status = body.status;
   if (body.clientName !== void 0) updates.clientName = body.clientName;
   if (body.clientPhone !== void 0) updates.clientPhone = body.clientPhone;
+  if (body.paymentMethod !== void 0) updates.paymentMethod = body.paymentMethod;
   if (body.date !== void 0) updates.date = body.date;
   if (body.time !== void 0) updates.time = body.time;
   if (body.serviceId !== void 0) {
@@ -56563,7 +56574,7 @@ async function getServiceFromDb2(serviceId) {
   return svc ?? null;
 }
 router4.post("/", async (req, res) => {
-  const { clientName, clientPhone, serviceId, time: time4, weekday, period, startDate, barberId } = req.body;
+  const { clientName, clientPhone, serviceId, time: time4, weekday, period, startDate, barberId, paymentMethod } = req.body;
   if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !period || !startDate) {
     res.status(400).json({ error: "Invalid request body" });
     return;
@@ -56620,6 +56631,7 @@ router4.post("/", async (req, res) => {
       date: date6,
       time: time4,
       barberId: barberId ?? null,
+      paymentMethod: paymentMethod ?? null,
       status: "pending",
       isRecurring: true,
       recurrenceType: "monthly_weekly",

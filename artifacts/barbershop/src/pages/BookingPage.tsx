@@ -103,6 +103,7 @@ export default function BookingPage() {
   const [period, setPeriod]           = useState<"this_month"|"next_2_months">("this_month");
   const [name, setName]               = useState("");
   const [phone, setPhone]             = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"dinheiro" | "pix_cartao">("dinheiro");
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
 
   const { data: services = [] } = useListServices();
@@ -139,7 +140,7 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
   const handleSingle = () => {
     if (!name || !phone || !serviceId || !date || !time) return;
     createMutation.mutate(
-      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null } },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null, paymentMethod, } },
       {
         onSuccess: () => setSuccessData({
           type: "single", serviceName: selectedService?.name || "",
@@ -739,22 +740,66 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
                 </div>
 
                 {/* Client form */}
-                <div className="space-y-3 mb-5">
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 pointer-events-none" />
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo"
-                      className="h-13 pl-11 rounded-2xl bg-white/[0.035] border-white/8 text-white placeholder:text-muted-foreground/50 focus-visible:ring-accent/25 focus-visible:border-accent/35 text-base"
-                      style={{ height: "52px" }}
-                      data-testid="input-name" />
-                  </div>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 pointer-events-none" />
-                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999"
-                      className="h-13 pl-11 rounded-2xl bg-white/[0.035] border-white/8 text-white placeholder:text-muted-foreground/50 focus-visible:ring-accent/25 focus-visible:border-accent/35 text-base"
-                      style={{ height: "52px" }}
-                      data-testid="input-phone" />
-                  </div>
-                </div>
+<div className="space-y-3 mb-5">
+
+  <div className="relative">
+    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 pointer-events-none" />
+
+    <Input
+      value={name}
+      onChange={(e) => setName(e.target.value)}
+      placeholder="Nome completo"
+      className="h-13 pl-11 rounded-2xl bg-white/[0.035] border-white/8 text-white placeholder:text-muted-foreground/50"
+      style={{ height: "52px" }}
+      data-testid="input-name"
+    />
+  </div>
+
+  <div className="relative">
+    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 pointer-events-none" />
+
+    <Input
+      value={phone}
+      onChange={(e) => setPhone(e.target.value)}
+      placeholder="(11) 99999-9999"
+      className="h-13 pl-11 rounded-2xl bg-white/[0.035] border-white/8 text-white placeholder:text-muted-foreground/50"
+      style={{ height: "52px" }}
+      data-testid="input-phone"
+    />
+  </div>
+
+<div className="space-y-2">
+  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    Pagamento
+  </p>
+
+  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("dinheiro")}
+      className={`h-11 rounded-xl text-sm font-semibold transition-all ${
+        paymentMethod === "dinheiro"
+          ? "bg-accent text-white shadow-lg"
+          : "text-muted-foreground hover:bg-white/[0.05]"
+      }`}
+    >
+      Dinheiro
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("pix_cartao")}
+      className={`h-11 rounded-xl text-sm font-semibold transition-all ${
+        paymentMethod === "pix_cartao"
+          ? "bg-accent text-white shadow-lg"
+          : "text-muted-foreground hover:bg-white/[0.05]"
+      }`}
+    >
+      Pix/Cartão
+    </button>
+  </div>
+</div>
+</div>
 
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                   <PremiumButton

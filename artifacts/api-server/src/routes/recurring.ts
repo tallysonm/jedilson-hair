@@ -66,9 +66,9 @@ async function getServiceFromDb(serviceId: string) {
 }
 
 router.post("/", async (req, res) => {
-  const { clientName, clientPhone, serviceId, time, weekday, period, startDate, barberId } = req.body as {
+  const { clientName, clientPhone, serviceId, time, weekday, period, startDate, barberId, paymentMethod } = req.body as {
     clientName: string; clientPhone: string; serviceId: string; time: string;
-    weekday: number; period: "this_month" | "next_2_months"; startDate: string; barberId?: string | null;
+    weekday: number; period: "this_month" | "next_2_months"; startDate: string; barberId?: string | null; paymentMethod?: string | null;
   };
 
   if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !period || !startDate) {
@@ -127,6 +127,7 @@ router.post("/", async (req, res) => {
       servicePrice: service.price,
       date, time,
       barberId: barberId ?? null,
+      paymentMethod: paymentMethod ?? null,
       status: "pending",
       isRecurring: true,
       recurrenceType: "monthly_weekly",

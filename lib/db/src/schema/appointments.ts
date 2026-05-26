@@ -9,6 +9,7 @@ export const appointmentsTable = pgTable("appointments", {
   serviceId: text("service_id").notNull(),
   serviceName: text("service_name").notNull(),
   servicePrice: numeric("service_price", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: text("payment_method"),
   date: text("date").notNull(),
   time: text("time").notNull(),
   status: text("status", { enum: ["pending", "completed", "cancelled"] }).notNull().default("pending"),

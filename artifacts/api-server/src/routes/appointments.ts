@@ -172,7 +172,7 @@ router.get("/export", async (req, res) => {
 
   const statusLabel = (s: string) => s === "completed" ? "Concluído" : s === "cancelled" ? "Cancelado" : "Pendente";
 
-  const header = "ID,Cliente,Telefone,Serviço,Preço,Data,Horário,Barbeiro,Status,Recorrente\n";
+  const header = "ID,Cliente,Telefone,Serviço,Preço,Data,Horário,Barbeiro,Pagamento,Status,Recorrente\n";
   const lines = rows.map(r =>
     [
       r.id,
@@ -183,6 +183,7 @@ router.get("/export", async (req, res) => {
       r.date,
       r.time,
       `"${r.barberId ? (barberMap.get(r.barberId) ?? r.barberId) : ""}"`,
+      `"${r.paymentMethod ?? ""}"`,
       statusLabel(r.status),
       r.isRecurring ? "Sim" : "Não",
     ].join(",")
@@ -236,7 +237,7 @@ router.post("/", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { clientName, clientPhone, serviceId, date, time } = parsed.data;
+  const { clientName, clientPhone, serviceId, date, time, paymentMethod } = parsed.data;
 
   if (date > getMaxAllowedDate()) {
     res.status(400).json({ error: "Data indisponível para agendamento" });
@@ -306,6 +307,7 @@ router.post("/", async (req, res) => {
     serviceId,
     serviceName: service.name,
     servicePrice: service.price,
+    paymentMethod,
     date,
     time,
     barberId,
@@ -345,6 +347,7 @@ router.patch("/:id", async (req, res) => {
   if (body.status !== undefined) updates.status = body.status;
   if (body.clientName !== undefined) updates.clientName = body.clientName;
   if (body.clientPhone !== undefined) updates.clientPhone = body.clientPhone;
+  if (body.paymentMethod !== undefined) updates.paymentMethod = body.paymentMethod;
   if (body.date !== undefined) updates.date = body.date;
   if (body.time !== undefined) updates.time = body.time;
   if (body.serviceId !== undefined) {
