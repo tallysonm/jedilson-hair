@@ -1001,16 +1001,83 @@ function HorariosTab() {
   const deleteMutation = useDeleteBlockedSlot();
   const invalidate = () => qc.invalidateQueries({ queryKey: getListBlockedSlotsQueryKey({}) });
 
-  const [form, setForm] = useState({ date: "", time: "", reason: "", allDay: true });
+  const [form, setForm] = useState({ date: "", endDate: "", time: "", reason: "", allDay: true });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const parseDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const formatDate = (value: Date) => {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  };
+
+  const getDatesRange = (start: string, end: string) => {
+    const dates: string[] = [];
+    let current = parseDate(start);
+    const last = parseDate(end);
+
+    while (current <= last) {
+      dates.push(formatDate(current));
+      current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+    }
+
+    return dates;
+  };
+
+  const executeBlockedSlotMutation = (slot: { date: string; time: string | null; reason: string | null; allDay: boolean }) =>
+    new Promise<void>((resolve, reject) => {
+      createMutation.mutate(
+        { data: slot },
+        { onSuccess: () => resolve(), onError: () => reject() }
+      );
+    });
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date) return;
-    createMutation.mutate(
-      { data: { date: form.date, time: form.allDay ? null : (form.time || null), reason: form.reason || null, allDay: form.allDay } },
-      { onSuccess: () => { toast({ title: "Horário bloqueado!" }); invalidate(); setForm({ date: "", time: "", reason: "", allDay: true }); },
-        onError: () => toast({ title: "Erro ao bloquear", variant: "destructive" }) }
-    );
+
+    const startDate = form.date;
+    const endDate = form.allDay && form.endDate ? form.endDate : form.date;
+    if (form.allDay && form.endDate && endDate < startDate) {
+      toast({ title: "Data final deve ser igual ou posterior à data inicial.", variant: "destructive" });
+      return;
+    }
+
+    const dates = form.allDay ? getDatesRange(startDate, endDate) : [startDate];
+    setIsSubmitting(true);
+
+    try {
+      for (const date of dates) {
+        await executeBlockedSlotMutation({
+          date,
+          time: form.allDay ? null : (form.time || null),
+          reason: form.reason || null,
+          allDay: form.allDay,
+        });
+      }
+
+      toast({ title: "Horário bloqueado!" });
+      invalidate();
+      setForm({ date: "", endDate: "", time: "", reason: "", allDay: true });
+    } catch {
+      toast({ title: "Erro ao bloquear", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickRange = (type: "week" | "month") => {
+    if (!form.date) return;
+
+    const start = parseDate(form.date);
+    const end =
+      type === "week"
+        ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+        : new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+    setForm((prev) => ({ ...prev, allDay: true, endDate: formatDate(end) }));
   };
 
   const inputClass = "bg-white/5 border border-white/8 h-10 rounded-xl text-white text-sm px-3 w-full focus:outline-none focus:border-accent/40 transition-colors placeholder:text-muted-foreground";
@@ -1025,7 +1092,7 @@ function HorariosTab() {
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data inicial</label>
               <input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className={`${inputClass} cursor-pointer`} required />
             </div>
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
@@ -1035,11 +1102,34 @@ function HorariosTab() {
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.allDay} onChange={e => setForm(p => ({ ...p, allDay: e.target.checked }))}
+              <input type="checkbox" checked={form.allDay} onChange={e => setForm(p => ({ ...p, allDay: e.target.checked, endDate: e.target.checked ? p.endDate : "" }))}
                 className="w-4 h-4 rounded border-white/20 accent-accent cursor-pointer" />
               <span className="text-sm text-muted-foreground">Bloquear o dia inteiro</span>
             </label>
           </div>
+          {form.allDay && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data final (opcional)</label>
+                <input type="date" value={form.endDate} onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))} className={`${inputClass} cursor-pointer`} />
+              </div>
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações rápidas</label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => handleQuickRange("week")}
+                    className="bg-white/5 border border-white/8 text-white text-sm rounded-xl px-3 py-2 hover:bg-white/10 transition"
+                    disabled={!form.date}>
+                    Bloquear semana
+                  </button>
+                  <button type="button" onClick={() => handleQuickRange("month")}
+                    className="bg-white/5 border border-white/8 text-white text-sm rounded-xl px-3 py-2 hover:bg-white/10 transition"
+                    disabled={!form.date}>
+                    Bloquear mês
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {!form.allDay && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horário específico (HH:MM)</label>
@@ -1047,8 +1137,8 @@ function HorariosTab() {
             </div>
           )}
           <div className="flex justify-end">
-            <Button type="submit" size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Bloqueando..." : "Bloquear"}
+            <Button type="submit" size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6" disabled={createMutation.isPending || isSubmitting}>
+              {createMutation.isPending || isSubmitting ? "Bloqueando..." : "Bloquear"}
             </Button>
           </div>
         </form>
