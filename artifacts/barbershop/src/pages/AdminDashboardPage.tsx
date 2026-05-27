@@ -347,9 +347,9 @@ function AppointmentsTab() {
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead><tr className="border-b border-white/6">{["Cliente","Serviço","Data / Hora","Barbeiro","Valor","Status",""].map((h)=><th key={h} className="px-5 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>)}</tr></thead>
+            <thead><tr className="border-b border-white/6">{["Cliente","Serviço","Data / Hora","Barbeiro","Valor","Pagamento","Status",""].map((h)=><th key={h} className="px-5 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>)}</tr></thead>
             <tbody>
-              {appointments.length===0?<tr><td colSpan={7} className="px-5 py-12 text-center text-muted-foreground text-sm">Nenhum agendamento encontrado.</td></tr>:
+              {appointments.length===0?<tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">Nenhum agendamento encontrado.</td></tr>:
               appointments.map((apt)=>(
                 <tr key={apt.id} className="border-b border-white/4 hover:bg-white/3 transition-colors group">
                   <td className="px-5 py-4"><div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">{apt.clientName.split(" ").map((w:string)=>w[0]).slice(0,2).join("")}</div><div><div className="flex items-center gap-1.5"><span className="font-semibold text-white text-sm">{apt.clientName}</span>{apt.isRecurring&&<span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-500/12 text-blue-400 border border-blue-500/20 tracking-wide">RECORRENTE</span>}</div><div className="text-xs text-muted-foreground">{apt.clientPhone}</div></div></div></td>
@@ -357,8 +357,9 @@ function AppointmentsTab() {
                   <td className="px-5 py-4"><div className="text-sm font-semibold text-white">{apt.date.split("-").reverse().join("/")}</div><div className="text-xs text-muted-foreground">{apt.time}</div></td>
                   <td className="px-5 py-4 text-sm text-muted-foreground">{apt.barberId?barbers.find((b)=>String(b.id)===apt.barberId)?.name??`#${apt.barberId}`:<span className="opacity-30">—</span>}</td>
                   <td className="px-5 py-4 text-sm text-gold font-bold">R$ {Number(apt.servicePrice).toFixed(2)}</td>
+                  <td className="px-5 py-4 text-sm"><span className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-semibold ${apt.paymentMethod === "pix_cartao" ? "bg-blue-500/15 text-blue-300" : "bg-emerald-500/15 text-emerald-300"}`}>{apt.paymentMethod === "pix_cartao" ? "Pix/Cartão" : "Dinheiro"}</span></td>
                   <td className="px-5 py-4"><span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${ss(apt.status)}`}>{sl(apt.status)}</span></td>
-                  <td className="px-5 py-4"><div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-5 py-4"><div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"> 
                     {apt.status==="pending"&&<button className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors" onClick={()=>handleComplete(apt.id)} data-testid={`btn-complete-${apt.id}`} title="Concluir"><Check className="w-3.5 h-3.5" /></button>}
                     <button className="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" onClick={()=>setDeleteTarget({id:apt.id,groupId:apt.recurrenceGroupId??null,isRecurring:!!apt.isRecurring})} data-testid={`btn-delete-${apt.id}`} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div></td>
