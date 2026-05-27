@@ -304,6 +304,7 @@ function AppointmentsTab() {
   const [period, setPeriod] = useState<"day"|"week"|"month"|undefined>(undefined);
   const [barberId, setBarberId] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<{id:number;groupId:string|null;isRecurring:boolean}|null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<any | null>(null);
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
@@ -361,6 +362,7 @@ function AppointmentsTab() {
                   <td className="px-5 py-4"><span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${ss(apt.status)}`}>{sl(apt.status)}</span></td>
                   <td className="px-5 py-4"><div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"> 
                     {apt.status==="pending"&&<button className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-colors" onClick={()=>handleComplete(apt.id)} data-testid={`btn-complete-${apt.id}`} title="Concluir"><Check className="w-3.5 h-3.5" /></button>}
+                    <button className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 flex items-center justify-center transition-colors" onClick={()=>setEditingAppointment(apt)} title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
                     <button className="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors" onClick={()=>setDeleteTarget({id:apt.id,groupId:apt.recurrenceGroupId??null,isRecurring:!!apt.isRecurring})} data-testid={`btn-delete-${apt.id}`} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div></td>
                 </tr>
