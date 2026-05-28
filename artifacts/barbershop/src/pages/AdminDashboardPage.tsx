@@ -317,6 +317,12 @@ function AppointmentsTab() {
   const handleComplete = (id:number) => updateMutation.mutate({id,data:{status:"completed"}},{onSuccess:invalidate});
   const handleDeleteSingle = () => { if (!deleteTarget) return; deleteMutation.mutate({id:deleteTarget.id},{onSuccess:()=>{invalidate();toast({title:"Excluído"});setDeleteTarget(null);}}); };
   const handleDeleteGroup = () => { if (!deleteTarget?.groupId) return; groupDeleteMutation.mutate({groupId:deleteTarget.groupId},{onSuccess:()=>{invalidate();toast({title:"Grupo excluído"});setDeleteTarget(null);}}); };
+  const handleSavePayment = () => {
+    if (!editingAppointment) return;
+    updateMutation.mutate({ id: editingAppointment.id, data: { paymentMethod: editingAppointment.paymentMethod } }, {
+      onSuccess: () => { invalidate(); setEditingAppointment(null); },
+    });
+  };
   const FILTERS: {label:string;value:typeof period}[] = [{label:"Todos",value:undefined},{label:"Hoje",value:"day"},{label:"Semana",value:"week"},{label:"Mês",value:"month"}];
   const ss = (s:string) => s==="completed"?"bg-emerald-500/10 text-emerald-400 border-emerald-500/20":s==="cancelled"?"bg-gray-500/10 text-gray-400 border-gray-500/20":"bg-amber-500/10 text-amber-400 border-amber-500/20";
   const sl = (s:string) => s==="completed"?"Concluído":s==="cancelled"?"Cancelado":"Pendente";
@@ -381,6 +387,31 @@ function AppointmentsTab() {
                 <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 rounded-xl" onClick={()=>setDeleteTarget(null)}>Cancelar</Button>
                 <Button size="sm" className="bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20 rounded-xl" onClick={handleDeleteSingle}>{deleteTarget.isRecurring?"Só este":"Excluir"}</Button>
                 {deleteTarget.isRecurring&&deleteTarget.groupId&&<Button size="sm" className="bg-red-600/20 text-red-300 hover:bg-red-600/30 border border-red-600/25 rounded-xl" onClick={handleDeleteGroup}>Toda a série</Button>}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+        {editingAppointment && (
+          <Dialog open onOpenChange={(o) => !o && setEditingAppointment(null)}>
+            <DialogContent className="bg-[#0f0f0f] border border-white/8 sm:max-w-sm rounded-3xl">
+              <DialogHeader>
+                <DialogTitle className="font-display text-white font-bold">Editar agendamento</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Forma de pagamento</label>
+                  <Select value={editingAppointment.paymentMethod ?? "dinheiro"} onValueChange={(value) => setEditingAppointment((prev) => prev ? { ...prev, paymentMethod: value } : prev)}>
+                    <SelectTrigger className="bg-white/5 border-white/8 h-10 text-sm rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-[#111] border-white/8">
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="pix_cartao">Pix/Cartão</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="flex gap-2 flex-wrap sm:justify-end pt-1">
+                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 rounded-xl" onClick={()=>setEditingAppointment(null)}>Cancelar</Button>
+                <Button size="sm" className="bg-accent hover:bg-accent/90 text-white rounded-xl font-bold px-6" onClick={handleSavePayment} disabled={updateMutation.isPending}>{updateMutation.isPending ? "Salvando..." : "Salvar"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
