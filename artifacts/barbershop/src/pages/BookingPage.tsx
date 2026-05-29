@@ -46,12 +46,12 @@ function generate30minSlots(openHour: number, closeHour: number): string[] {
   return slots;
 }
 const WEEKDAY_SLOTS: Record<string, string[]> = {
-  "0": generate30minSlots(7, 14),
-  "2": generate30minSlots(7, 20),
-  "3": generate30minSlots(7, 20),
-  "4": generate30minSlots(7, 20),
-  "5": generate30minSlots(7, 20),
-  "6": generate30minSlots(7, 20),
+  "0": generate30minSlots(6.5, 21),
+  "2": generate30minSlots(6.5, 21),
+  "3": generate30minSlots(6.5, 21),
+  "4": generate30minSlots(6.5, 21),
+  "5": generate30minSlots(6.5, 21),
+  "6": generate30minSlots(6.5, 21),
 };
 function getMaxDate(): string {
   const now = new Date();

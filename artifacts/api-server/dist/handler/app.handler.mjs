@@ -56593,7 +56593,8 @@ router4.post("/", async (req, res) => {
     res.status(400).json({ error: "Servi\xE7o inv\xE1lido" });
     return;
   }
-  const targetDates = generateRecurringDates(weekday, period, startDate);
+  const effectiveWeekday = (/* @__PURE__ */ new Date(`${startDate}T12:00:00`)).getDay();
+  const targetDates = generateRecurringDates(effectiveWeekday, period, startDate);
   if (targetDates.length === 0) {
     res.status(400).json({ error: "Nenhuma data dispon\xEDvel no per\xEDodo selecionado" });
     return;
@@ -56636,7 +56637,7 @@ router4.post("/", async (req, res) => {
       date: date6,
       time: time4,
       barberId: barberId ?? null,
-      paymentMethod: paymentMethod ?? null,
+      paymentMethod: paymentMethod === "pix_cartao" ? "pix_cartao" : "dinheiro",
       status: "pending",
       isRecurring: true,
       recurrenceType: "monthly_weekly",

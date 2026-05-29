@@ -86,7 +86,8 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const targetDates = generateRecurringDates(weekday, period, startDate);
+const effectiveWeekday = new Date(`${startDate}T12:00:00`).getDay();
+const targetDates = generateRecurringDates(effectiveWeekday, period, startDate);
   if (targetDates.length === 0) {
     res.status(400).json({ error: "Nenhuma data disponível no período selecionado" });
     return;
@@ -127,7 +128,7 @@ router.post("/", async (req, res) => {
       servicePrice: service.price,
       date, time,
       barberId: barberId ?? null,
-      paymentMethod: paymentMethod ?? null,
+      paymentMethod: paymentMethod === "pix_cartao" ? "pix_cartao" : "dinheiro",
       status: "pending",
       isRecurring: true,
       recurrenceType: "monthly_weekly",
