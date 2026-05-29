@@ -156,6 +156,7 @@ function SectionHeader({ title, action }: { title: string; action?: React.ReactN
 ══════════════════════════════════════════════ */
 function OverviewTab() {
   const { data: summary } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
+  const summaryAny = summary as any;
   const { data: revenueData } = useGetRevenueChart({ query: { queryKey: getGetRevenueChartQueryKey() } });
   const { data: servicesData } = useGetServicesChart({ query: { queryKey: getGetServicesChartQueryKey() } });
   const BAR_COLORS = ["#C1121F","#e35d66","#ea8c92","#f0b0b4","#f5cdd0"];
@@ -164,6 +165,13 @@ function OverviewTab() {
     { title: "Faturamento do Mês", value: summary?.monthRevenue || 0, prefix: "R$ ", icon: TrendingUp, gradient: "from-blue-500/10 to-transparent", iconBg: "bg-blue-500/10", iconColor: "text-blue-400", border: "border-blue-500/10" },
     { title: "Agendamentos Hoje", value: summary?.todayAppointments || 0, prefix: "", icon: CalendarCheck, gradient: "from-rose-500/10 to-transparent", iconBg: "bg-rose-500/10", iconColor: "text-rose-400", border: "border-rose-500/10" },
   ];
+  const paymentCards = [
+  { title: "Dinheiro Hoje", value: summaryAny?.todayRevenueCash || 0, prefix: "R$ ", icon: DollarSign, gradient: "from-cyan-500/10 to-transparent", iconBg: "bg-cyan-500/10", iconColor: "text-cyan-400", border: "border-cyan-500/10" },
+  { title: "Pix/Cartão Hoje", value: summaryAny?.todayRevenuePixCard || 0, prefix: "R$ ", icon: DollarSign, gradient: "from-indigo-500/10 to-transparent", iconBg: "bg-indigo-500/10", iconColor: "text-indigo-400", border: "border-indigo-500/10" },
+  { title: "Dinheiro Mês", value: summaryAny?.monthRevenueCash || 0, prefix: "R$ ", icon: TrendingUp, gradient: "from-cyan-500/10 to-transparent", iconBg: "bg-cyan-500/10", iconColor: "text-cyan-400", border: "border-cyan-500/10" },
+  { title: "Pix/Cartão Mês", value: summaryAny?.monthRevenuePixCard || 0, prefix: "R$ ", icon: TrendingUp, gradient: "from-indigo-500/10 to-transparent", iconBg: "bg-indigo-500/10", iconColor: "text-indigo-400", border: "border-indigo-500/10" },
+];
+  
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <SectionHeader title="Visão Geral" />
@@ -183,6 +191,27 @@ function OverviewTab() {
           </motion.div>
         ))}
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+  {paymentCards.map((card, i) => (
+    <motion.div
+      key={`payment-${i}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`relative overflow-hidden rounded-3xl border bg-gradient-to-br ${card.gradient} ${card.border} p-6`}
+    >
+      <div className="flex items-start justify-between">
+        <p className="text-muted-foreground text-sm">{card.title}</p>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.iconBg}`}>
+          <card.icon className={`w-4 h-4 ${card.iconColor}`} />
+        </div>
+      </div>
+
+      <p className="font-display text-3xl font-bold mt-6">
+        <AnimatedNumber target={card.value} prefix={card.prefix} />
+      </p>
+    </motion.div>
+  ))}
+</div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="lg:col-span-2 glass-card rounded-2xl p-6">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Faturamento</p>

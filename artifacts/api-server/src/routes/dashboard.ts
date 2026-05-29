@@ -41,15 +41,37 @@ router.get("/summary", async (_req, res) => {
 
   const todayRevenue = todayCompleted.reduce((sum, r) => sum + Number(r.servicePrice), 0);
   const monthRevenue = monthCompleted.reduce((sum, r) => sum + Number(r.servicePrice), 0);
+  const getPrice = (r: any) => Number(r.servicePrice ?? r.service_price ?? 0);
+const getPayment = (r: any) => String(r.paymentMethod ?? r.payment_method ?? "");
+
+const todayRevenueCash = todayCompleted
+  .filter((r: any) => getPayment(r) === "dinheiro")
+  .reduce((sum: number, r: any) => sum + getPrice(r), 0);
+
+const todayRevenuePixCard = todayCompleted
+  .filter((r: any) => getPayment(r) === "pix_cartao")
+  .reduce((sum: number, r: any) => sum + getPrice(r), 0);
+
+const monthRevenueCash = monthCompleted
+  .filter((r: any) => getPayment(r) === "dinheiro")
+  .reduce((sum: number, r: any) => sum + getPrice(r), 0);
+
+const monthRevenuePixCard = monthCompleted
+  .filter((r: any) => getPayment(r) === "pix_cartao")
+  .reduce((sum: number, r: any) => sum + getPrice(r), 0);
 
   res.json({
-    todayRevenue,
-    monthRevenue,
-    todayAppointments: todayAll.length,
-    monthAppointments: monthCompleted.length,
-    pendingAppointments: pendingRows.length,
-    completedToday: todayCompleted.length,
-  });
+  todayRevenue,
+  monthRevenue,
+  todayRevenueCash,
+  todayRevenuePixCard,
+  monthRevenueCash,
+  monthRevenuePixCard,
+  todayAppointments: todayAll.length,
+  monthAppointments: monthCompleted.length,
+  pendingAppointments: pendingRows.length,
+  completedToday: todayCompleted.length,
+});
 });
 
 router.get("/revenue-chart", async (_req, res) => {
