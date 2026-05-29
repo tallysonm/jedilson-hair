@@ -157,7 +157,7 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
   const handleRecurring = () => {
     if (!name || !phone || !serviceId || !time) return;
     createRecurringMutation.mutate(
-      { data: { clientName: name, clientPhone: phone, serviceId, time, weekday: parseInt(weekday, 10), period, startDate: new Date().toISOString().split("T")[0], barberId: barberId !== "all" ? barberId : null } },
+      { data: { clientName: name, clientPhone: phone, serviceId, time, weekday: parseInt(weekday, 10), period, startDate: new Date().toISOString().split("T")[0], barberId: barberId !== "all" ? barberId : null, paymentMethod:"dinheiro" }},
       {
         onSuccess: (result) => {
           if (result.created.length === 0) { toast({ title: "Sem disponibilidade", description: "Todas as datas estão ocupadas.", variant: "destructive" }); return; }
