@@ -337,6 +337,7 @@ function AppointmentsTab() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
+  const {data:services=[]}=useListServices();
   const params = { ...(period?{period}:{}), ...(barberId!=="all"?{barberId}:{}) };
   const { data: appointments = [] } = useListAppointments(params, { query: { queryKey: getListAppointmentsQueryKey(params) } });
   const updateMutation = useUpdateAppointment();
@@ -346,12 +347,20 @@ function AppointmentsTab() {
   const handleComplete = (id:number) => updateMutation.mutate({id,data:{status:"completed"}},{onSuccess:invalidate});
   const handleDeleteSingle = () => { if (!deleteTarget) return; deleteMutation.mutate({id:deleteTarget.id},{onSuccess:()=>{invalidate();toast({title:"Excluído"});setDeleteTarget(null);}}); };
   const handleDeleteGroup = () => { if (!deleteTarget?.groupId) return; groupDeleteMutation.mutate({groupId:deleteTarget.groupId},{onSuccess:()=>{invalidate();toast({title:"Grupo excluído"});setDeleteTarget(null);}}); };
-  const handleSavePayment = () => {
-    if (!editingAppointment) return;
-    updateMutation.mutate({ id: editingAppointment.id, data: { paymentMethod: editingAppointment.paymentMethod } }, {
-      onSuccess: () => { invalidate(); setEditingAppointment(null); },
-    });
-  };
+const handleSavePayment = () => {
+  if (!editingAppointment) return;
+  updateMutation.mutate({
+    id: editingAppointment.id,
+    data: {
+      serviceId: editingAppointment.serviceId,
+      date: editingAppointment.date,
+      time: editingAppointment.time,
+      paymentMethod: editingAppointment.paymentMethod,
+    }
+  }, {
+    onSuccess: () => { invalidate(); setEditingAppointment(null); },
+  });
+};
   const FILTERS: {label:string;value:typeof period}[] = [{label:"Todos",value:undefined},{label:"Hoje",value:"day"},{label:"Semana",value:"week"},{label:"Mês",value:"month"}];
   const ss = (s:string) => s==="completed"?"bg-emerald-500/10 text-emerald-400 border-emerald-500/20":s==="cancelled"?"bg-gray-500/10 text-gray-400 border-gray-500/20":"bg-amber-500/10 text-amber-400 border-amber-500/20";
   const sl = (s:string) => s==="completed"?"Concluído":s==="cancelled"?"Cancelado":"Pendente";
@@ -428,8 +437,30 @@ function AppointmentsTab() {
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Serviço</label>
+                  <Select value={editingAppointment.serviceId} onValueChange={(value) => setEditingAppointment((prev:any) => prev ? { ...prev, serviceId: value } : prev)}>
+                    <SelectTrigger className="bg-white/5 border-white/8 h-10 text-sm rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="bg-[#111] border-white/8">
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</label>
+                  <Input type="date" value={editingAppointment.date} onChange={(e) => setEditingAppointment((prev:any) => prev ? { ...prev, date: e.target.value } : prev)} className="bg-white/5 border-white/8 h-10 text-sm rounded-xl text-white" />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horário</label>
+                  <Input type="time" value={editingAppointment.time} onChange={(e) => setEditingAppointment((prev:any) => prev ? { ...prev, time: e.target.value } : prev)} className="bg-white/5 border-white/8 h-10 text-sm rounded-xl text-white" />
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Forma de pagamento</label>
-                  <Select value={editingAppointment.paymentMethod ?? "dinheiro"} onValueChange={(value) => setEditingAppointment((prev) => prev ? { ...prev, paymentMethod: value } : prev)}>
+                  <Select value={editingAppointment.paymentMethod ?? "dinheiro"} onValueChange={(value) => setEditingAppointment((prev:any) => prev ? { ...prev, paymentMethod: value } : prev)}>
                     <SelectTrigger className="bg-white/5 border-white/8 h-10 text-sm rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent className="bg-[#111] border-white/8">
                       <SelectItem value="dinheiro">Dinheiro</SelectItem>
