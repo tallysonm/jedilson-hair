@@ -33,7 +33,7 @@ function getDateRange(period: string) {
   return null;
 }
 
-const BUFFER_MINUTES = 10;
+const BUFFER_MINUTES = 0;
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);

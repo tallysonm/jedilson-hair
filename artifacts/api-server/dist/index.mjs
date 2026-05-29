@@ -56263,7 +56263,7 @@ function getDateRange(period) {
   }
   return null;
 }
-var BUFFER_MINUTES = 10;
+var BUFFER_MINUTES = 0;
 function timeToMinutes(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
