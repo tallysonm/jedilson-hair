@@ -56613,7 +56613,7 @@ router4.post("/", async (req, res) => {
       skipped.push(date6);
       continue;
     }
-    const overlapConditions = [eq(appointmentsTable.date, date6), eq(appointmentsTable.status, "pending")];
+    const overlapConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
     if (barberId) overlapConditions.push(eq(appointmentsTable.barberId, barberId));
     const sameDayPending = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId }).from(appointmentsTable).where(and(...overlapConditions));
     const hasOverlap = (await Promise.all(sameDayPending.map(async (b) => {

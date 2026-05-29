@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { appointmentsTable, servicesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 
 const router = Router();
 
@@ -103,7 +103,7 @@ router.post("/", async (req, res) => {
     if (!hours) { skipped.push(date); continue; }
     if (newStart < hours.open * 60 || newEnd > hours.close * 60) { skipped.push(date); continue; }
 
-    const overlapConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+    const overlapConditions = [eq(appointmentsTable.date, date), ne(appointmentsTable.status, "cancelled")];
     if (barberId) overlapConditions.push(eq(appointmentsTable.barberId, barberId));
 
     const sameDayPending = await db
