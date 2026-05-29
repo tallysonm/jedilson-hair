@@ -10,7 +10,7 @@ import {
   DeleteAppointmentParams,
   GetAvailableSlotsQueryParams,
 } from "@workspace/api-zod";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, ne } from "drizzle-orm";
 
 const router = Router();
 
@@ -128,7 +128,12 @@ router.get("/available-slots", async (req, res) => {
   const booked = await db
     .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
     .from(appointmentsTable)
-    .where(and(...baseConditions));
+    .where(
+  and(
+    ...baseConditions,
+    ne(appointmentsTable.status, "cancelled")
+  )
+);
 
   const bookedWindows = await Promise.all(booked.map(async b => {
     const existingService = await getServiceFromDb(b.serviceId);

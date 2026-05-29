@@ -56326,7 +56326,12 @@ router3.get("/available-slots", async (req, res) => {
   const blockedTimeSet = new Set(blockedTimes.map((b) => b.time).filter(Boolean));
   const baseConditions = [eq(appointmentsTable.date, date6), eq(appointmentsTable.status, "pending")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
-  const booked = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId }).from(appointmentsTable).where(and(...baseConditions));
+  const booked = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId }).from(appointmentsTable).where(
+    and(
+      ...baseConditions,
+      ne(appointmentsTable.status, "cancelled")
+    )
+  );
   const bookedWindows = await Promise.all(booked.map(async (b) => {
     const existingService = await getServiceFromDb(b.serviceId);
     const existingDuration = existingService ? existingService.durationMinutes : 30;
