@@ -122,7 +122,7 @@ router.get("/available-slots", async (req, res) => {
     .where(and(eq(blockedSlotsTable.date, date), eq(blockedSlotsTable.allDay, false)));
   const blockedTimeSet = new Set(blockedTimes.map(b => b.time).filter(Boolean));
 
-  const baseConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+  const baseConditions = [eq(appointmentsTable.date, date), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
 
   const booked = await db
@@ -285,7 +285,7 @@ router.post("/", async (req, res) => {
   // When a specific barber is requested, only check that barber's slots.
   // When no barber is specified ("any available"), check all unassigned + all barbers
   // to avoid double-booking the same generic slot.
-  const conflictConditions = [eq(appointmentsTable.date, date), eq(appointmentsTable.status, "pending")];
+  const conflictConditions = [eq(appointmentsTable.date, date), ne(appointmentsTable.status, "cancelled")];
   if (barberId) conflictConditions.push(eq(appointmentsTable.barberId, barberId));
 
   const sameDayPending = await db

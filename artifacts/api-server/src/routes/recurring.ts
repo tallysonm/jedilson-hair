@@ -5,7 +5,7 @@ import { eq, and, ne } from "drizzle-orm";
 
 const router = Router();
 
-const BUFFER_MINUTES = 10;
+const BUFFER_MINUTES = 0;
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -86,12 +86,11 @@ router.post("/", async (req, res) => {
     return;
   }
 
-const effectiveWeekday = new Date(`${startDate}T12:00:00`).getDay();
-const targetDates = generateRecurringDates(effectiveWeekday, period, startDate);
-  if (targetDates.length === 0) {
-    res.status(400).json({ error: "Nenhuma data disponível no período selecionado" });
-    return;
-  }
+const targetDates = generateRecurringDates(weekday, period, startDate);
+if (targetDates.length === 0) {
+  res.status(400).json({ error: "Nenhuma data disponível no período selecionado" });
+  return;
+}
 
   const newStart = timeToMinutes(time);
   const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;

@@ -56324,7 +56324,7 @@ router3.get("/available-slots", async (req, res) => {
   const allSlots = generateTimeSlots(hours.open, hours.close, duration3);
   const blockedTimes = await db.select({ time: blockedSlotsTable.time }).from(blockedSlotsTable).where(and(eq(blockedSlotsTable.date, date6), eq(blockedSlotsTable.allDay, false)));
   const blockedTimeSet = new Set(blockedTimes.map((b) => b.time).filter(Boolean));
-  const baseConditions = [eq(appointmentsTable.date, date6), eq(appointmentsTable.status, "pending")];
+  const baseConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
   const booked = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId }).from(appointmentsTable).where(
     and(
@@ -56441,7 +56441,7 @@ router3.post("/", async (req, res) => {
   const newStart = timeToMinutes(time4);
   const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
   const barberId = typeof req.body["barberId"] === "string" ? req.body["barberId"] : null;
-  const conflictConditions = [eq(appointmentsTable.date, date6), eq(appointmentsTable.status, "pending")];
+  const conflictConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
   if (barberId) conflictConditions.push(eq(appointmentsTable.barberId, barberId));
   const sameDayPending = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId, barberId: appointmentsTable.barberId }).from(appointmentsTable).where(and(...conflictConditions));
   const hasOverlap = (await Promise.all(sameDayPending.map(async (b) => {
@@ -56539,7 +56539,7 @@ var appointments_default = router3;
 // src/routes/recurring.ts
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
-var BUFFER_MINUTES2 = 10;
+var BUFFER_MINUTES2 = 0;
 function timeToMinutes2(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -56603,8 +56603,7 @@ router4.post("/", async (req, res) => {
     res.status(400).json({ error: "Servi\xE7o inv\xE1lido" });
     return;
   }
-  const effectiveWeekday = (/* @__PURE__ */ new Date(`${startDate}T12:00:00`)).getDay();
-  const targetDates = generateRecurringDates(effectiveWeekday, period, startDate);
+  const targetDates = generateRecurringDates(weekday, period, startDate);
   if (targetDates.length === 0) {
     res.status(400).json({ error: "Nenhuma data dispon\xEDvel no per\xEDodo selecionado" });
     return;
