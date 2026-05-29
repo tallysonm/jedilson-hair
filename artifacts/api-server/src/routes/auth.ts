@@ -3,8 +3,8 @@ import { AdminLoginBody } from "@workspace/api-zod";
 
 const router = Router();
 
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "1234";
+const ADMIN_USERNAME = "jedilson";
+const ADMIN_PASSWORD = "jss918216";
 const ADMIN_TOKEN = "barbershop-admin-token-secret";
 
 router.post("/login", (req, res) => {

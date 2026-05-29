@@ -56646,8 +56646,8 @@ var recurring_default = router4;
 // src/routes/auth.ts
 var import_express5 = __toESM(require_express2(), 1);
 var router5 = (0, import_express5.Router)();
-var ADMIN_USERNAME = "admin";
-var ADMIN_PASSWORD = "1234";
+var ADMIN_USERNAME = "jedilson";
+var ADMIN_PASSWORD = "jss918216";
 var ADMIN_TOKEN = "barbershop-admin-token-secret";
 router5.post("/login", (req, res) => {
   const parsed = AdminLoginBody.safeParse(req.body);
