@@ -45,14 +45,8 @@ function generate30minSlots(openHour: number, closeHour: number): string[] {
   }
   return slots;
 }
-const WEEKDAY_SLOTS: Record<string, string[]> = {
-  "0": generate30minSlots(6.5, 21),
-  "2": generate30minSlots(6.5, 21),
-  "3": generate30minSlots(6.5, 21),
-  "4": generate30minSlots(6.5, 21),
-  "5": generate30minSlots(6.5, 21),
-  "6": generate30minSlots(6.5, 21),
-};
+const applyPermanentBlocks=(weekday:string,slots:string[])=>slots.filter(slot=>{if(slot==="08:00")return false;if(["2","3","4","5"].includes(weekday)&&["11:30","12:00","12:30","13:00","13:30"].includes(slot))return false;if(weekday==="6"&&["13:00","13:30"].includes(slot))return false;return true;});
+const WEEKDAY_SLOTS:Record<string,string[]>={"0":applyPermanentBlocks("0",generate30minSlots(6.5,21)),"2":applyPermanentBlocks("2",generate30minSlots(6.5,21)),"3":applyPermanentBlocks("3",generate30minSlots(6.5,21)),"4":applyPermanentBlocks("4",generate30minSlots(6.5,21)),"5":applyPermanentBlocks("5",generate30minSlots(6.5,21)),"6":applyPermanentBlocks("6",generate30minSlots(6.5,21))};
 function getMaxDate(): string {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString().split("T")[0];

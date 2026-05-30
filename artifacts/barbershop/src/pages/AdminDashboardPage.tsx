@@ -489,7 +489,8 @@ const ADMIN_WEEKDAYS = [
   {value:"4",label:"Quinta-feira",short:"Qui"},{value:"5",label:"Sexta-feira",short:"Sex"},{value:"6",label:"Sábado",short:"Sáb"},
 ];
 function generate30minSlots(openHour:number,closeHour:number):string[]{const slots:string[]=[];let cur=openHour*60;while(cur+30<=closeHour*60){const h=Math.floor(cur/60).toString().padStart(2,"0");const m=(cur%60).toString().padStart(2,"0");slots.push(`${h}:${m}`);cur+=30;}return slots;}
-const ADMIN_WEEKDAY_SLOTS:Record<string,string[]>={"0":generate30minSlots(6.5,21),"2":generate30minSlots(6.5,21),"3":generate30minSlots(6.5,21),"4":generate30minSlots(6.5,21),"5":generate30minSlots(6.5,21),"6":generate30minSlots(6.5,21)};
+const applyPermanentBlocks=(weekday:string,slots:string[])=>slots.filter(slot=>{if(slot==="08:00")return false;if(["2","3","4","5"].includes(weekday)&&["11:30","12:00","12:30","13:00","13:30"].includes(slot))return false;if(weekday==="6"&&["13:00","13:30"].includes(slot))return false;return true;});
+const ADMIN_WEEKDAY_SLOTS:Record<string,string[]>={"0":applyPermanentBlocks("0",generate30minSlots(6.5,21)),"2":applyPermanentBlocks("2",generate30minSlots(6.5,21)),"3":applyPermanentBlocks("3",generate30minSlots(6.5,21)),"4":applyPermanentBlocks("4",generate30minSlots(6.5,21)),"5":applyPermanentBlocks("5",generate30minSlots(6.5,21)),"6":applyPermanentBlocks("6",generate30minSlots(6.5,21))};
 const ADMIN_PERIOD_OPTIONS=[{value:"this_month",label:"Este mês"},{value:"next_2_months",label:"Próximos 2 meses"}];
 function getMaxDate(){const now=new Date();return new Date(now.getFullYear(),now.getMonth()+3,now.getDate()).toISOString().split("T")[0];}
 type AdminRecurringResult={groupId:string;created:string[];skipped:number;time:string};
