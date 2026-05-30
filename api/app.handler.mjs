@@ -56314,6 +56314,21 @@ router3.get("/available-slots", async (req, res) => {
   const allSlots = generateTimeSlots(hours.open, hours.close, duration3);
   const blockedTimes = await db.select({ time: blockedSlotsTable.time }).from(blockedSlotsTable).where(and(eq(blockedSlotsTable.date, date6), eq(blockedSlotsTable.allDay, false)));
   const blockedTimeSet = new Set(blockedTimes.map((b) => b.time).filter(Boolean));
+  const weekday = (/* @__PURE__ */ new Date(`${date6}T12:00:00`)).getDay();
+  if (weekday >= 2 || weekday === 0) {
+    blockedTimeSet.add("08:00");
+  }
+  if (weekday >= 2 && weekday <= 5) {
+    blockedTimeSet.add("11:30");
+    blockedTimeSet.add("12:00");
+    blockedTimeSet.add("12:30");
+    blockedTimeSet.add("13:00");
+    blockedTimeSet.add("13:30");
+  }
+  if (weekday === 6) {
+    blockedTimeSet.add("13:00");
+    blockedTimeSet.add("13:30");
+  }
   const baseConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
   const booked = await db.select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId }).from(appointmentsTable).where(

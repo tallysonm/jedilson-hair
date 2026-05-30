@@ -121,6 +121,27 @@ router.get("/available-slots", async (req, res) => {
     .from(blockedSlotsTable)
     .where(and(eq(blockedSlotsTable.date, date), eq(blockedSlotsTable.allDay, false)));
   const blockedTimeSet = new Set(blockedTimes.map(b => b.time).filter(Boolean));
+  const weekday = new Date(`${date}T12:00:00`).getDay();
+
+// Terça a Domingo - bloqueia 08:00
+if (weekday >= 2 || weekday === 0) {
+  blockedTimeSet.add("08:00");
+}
+
+// Terça a Sexta - bloqueia almoço
+if (weekday >= 2 && weekday <= 5) {
+  blockedTimeSet.add("11:30");
+  blockedTimeSet.add("12:00");
+  blockedTimeSet.add("12:30");
+  blockedTimeSet.add("13:00");
+  blockedTimeSet.add("13:30");
+}
+
+// Sábado - bloqueia 13:00 e 13:30
+if (weekday === 6) {
+  blockedTimeSet.add("13:00");
+  blockedTimeSet.add("13:30");
+}
 
   const baseConditions = [eq(appointmentsTable.date, date), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
