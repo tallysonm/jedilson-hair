@@ -450,7 +450,7 @@ const handleSavePayment = () => {
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</label>
-                  <Input type="date" value={editingAppointment.date} onChange={(e) => setEditingAppointment((prev:any) => prev ? { ...prev, date: e.target.value } : prev)} className="bg-white/5 border-white/8 h-10 text-sm rounded-xl text-white" />
+                  <Input type="date" min={new Date().toISOString().split("T")[0]} value={editingAppointment.date} onChange={(e) => setEditingAppointment((prev:any) => prev ? { ...prev, date: e.target.value } : prev)} className="bg-white/5 border-white/8 h-10 text-sm rounded-xl text-white" /> />
                 </div>
 
                 <div className="space-y-1">
