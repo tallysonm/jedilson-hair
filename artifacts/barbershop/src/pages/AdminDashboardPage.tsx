@@ -1095,7 +1095,7 @@ function HorariosTab() {
   const deleteMutation = useDeleteBlockedSlot();
   const invalidate = () => qc.invalidateQueries({ queryKey: getListBlockedSlotsQueryKey({}) });
 
-  const [form, setForm] = useState({ date: "", endDate: "", time: "", reason: "", allDay: true });
+  const [form, setForm] = useState({ date: "", endDate: "", time: "", reason: "", allDay: true, recurring: false, weekdays: [] as string[], startTime: "", endTime: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const parseDate = (value: string) => {
@@ -1128,39 +1128,80 @@ function HorariosTab() {
       );
     });
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.date) return;
+const handleCreate = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!form.date) return;
 
-    const startDate = form.date;
-    const endDate = form.allDay && form.endDate ? form.endDate : form.date;
-    if (form.allDay && form.endDate && endDate < startDate) {
-      toast({ title: "Data final deve ser igual ou posterior à data inicial.", variant: "destructive" });
-      return;
+  const startDate = form.date;
+  const endDate = form.endDate || form.date;
+
+  if (endDate < startDate) {
+    toast({ title: "Data final deve ser igual ou posterior à data inicial.", variant: "destructive" });
+    return;
+  }
+
+  if (form.recurring && form.weekdays.length === 0) {
+    toast({ title: "Selecione pelo menos um dia da semana.", variant: "destructive" });
+    return;
+  }
+
+  if (form.recurring && (!form.startTime || !form.endTime)) {
+    toast({ title: "Informe horário inicial e final.", variant: "destructive" });
+    return;
+  }
+
+  const getTimeSlotsRange = (start: string, end: string) => {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    const slots: string[] = [];
+    let current = sh * 60 + sm;
+    const finish = eh * 60 + em;
+
+    while (current < finish) {
+      const h = Math.floor(current / 60).toString().padStart(2, "0");
+      const m = (current % 60).toString().padStart(2, "0");
+      slots.push(`${h}:${m}`);
+      current += 30;
     }
 
-    const dates = form.allDay ? getDatesRange(startDate, endDate) : [startDate];
-    setIsSubmitting(true);
+    return slots;
+  };
 
-    try {
-      for (const date of dates) {
+  const dates = form.recurring
+    ? getDatesRange(startDate, endDate).filter((date) =>
+        form.weekdays.includes(String(parseDate(date).getDay()))
+      )
+    : form.allDay
+      ? getDatesRange(startDate, endDate)
+      : [startDate];
+
+  const times = form.recurring
+    ? getTimeSlotsRange(form.startTime, form.endTime)
+    : [form.time || null];
+
+  setIsSubmitting(true);
+
+  try {
+    for (const date of dates) {
+      for (const time of times) {
         await executeBlockedSlotMutation({
           date,
-          time: form.allDay ? null : (form.time || null),
+          time: form.recurring ? time : form.allDay ? null : time,
           reason: form.reason || null,
-          allDay: form.allDay,
+          allDay: form.recurring ? false : form.allDay,
         });
       }
-
-      toast({ title: "Horário bloqueado!" });
-      invalidate();
-      setForm({ date: "", endDate: "", time: "", reason: "", allDay: true });
-    } catch {
-      toast({ title: "Erro ao bloquear", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+
+    toast({ title: "Horário bloqueado!" });
+    invalidate();
+    setForm({ date: "", endDate: "", time: "", reason: "", allDay: true, recurring: false, weekdays: [] as string[], startTime: "", endTime: "" });
+  } catch {
+    toast({ title: "Erro ao bloquear", variant: "destructive" });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleQuickRange = (type: "week" | "month") => {
     if (!form.date) return;
@@ -1194,13 +1235,104 @@ function HorariosTab() {
               <input value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="Ex: Feriado, folga..." className={inputClass} />
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.allDay} onChange={e => setForm(p => ({ ...p, allDay: e.target.checked, endDate: e.target.checked ? p.endDate : "" }))}
-                className="w-4 h-4 rounded border-white/20 accent-accent cursor-pointer" />
-              <span className="text-sm text-muted-foreground">Bloquear o dia inteiro</span>
-            </label>
-          </div>
+<div className="flex items-center gap-4 flex-wrap">
+  <label className="flex items-center gap-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={form.allDay}
+      onChange={e => setForm(p => ({ ...p, allDay: e.target.checked, endDate: e.target.checked ? p.endDate : "" }))}
+      className="w-4 h-4 rounded border-white/20 accent-accent cursor-pointer"
+    />
+    <span className="text-sm text-muted-foreground">Bloquear o dia inteiro</span>
+  </label>
+
+  <label className="flex items-center gap-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={form.recurring}
+      onChange={e => setForm(p => ({ ...p, recurring: e.target.checked }))}
+      className="w-4 h-4 rounded border-white/20 accent-accent cursor-pointer"
+    />
+    <span className="text-sm text-muted-foreground">Bloqueio recorrente</span>
+  </label>
+</div>
+{form.recurring && (
+  <div className="space-y-3 rounded-2xl border border-white/8 bg-white/4 p-4">
+    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      Dias da semana
+    </p>
+
+    <div className="flex flex-wrap gap-2">
+      {[
+        { value: "1", label: "Seg" },
+        { value: "2", label: "Ter" },
+        { value: "3", label: "Qua" },
+        { value: "4", label: "Qui" },
+        { value: "5", label: "Sex" },
+        { value: "6", label: "Sáb" },
+        { value: "0", label: "Dom" },
+      ].map((day) => (
+        <button
+          key={day.value}
+          type="button"
+          onClick={() =>
+            setForm((p) => ({
+              ...p,
+              weekdays: p.weekdays.includes(day.value)
+                ? p.weekdays.filter((d) => d !== day.value)
+                : [...p.weekdays, day.value],
+            }))
+          }
+          className={`h-9 px-3 rounded-xl text-sm font-semibold border transition-all ${
+            form.weekdays.includes(day.value)
+              ? "bg-accent border-accent text-white"
+              : "bg-white/5 border-white/8 text-muted-foreground hover:text-white"
+          }`}
+        >
+          {day.label}
+        </button>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Horário inicial
+        </label>
+        <input
+          type="time"
+          value={form.startTime}
+          onChange={e => setForm(p => ({ ...p, startTime: e.target.value }))}
+          className={`${inputClass} cursor-pointer`}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Horário final
+        </label>
+        <input
+          type="time"
+          value={form.endTime}
+          onChange={e => setForm(p => ({ ...p, endTime: e.target.value }))}
+          className={`${inputClass} cursor-pointer`}
+        />
+      </div>
+
+      <div className="space-y-1.5 col-span-2">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Data final
+        </label>
+        <input
+          type="date"
+          value={form.endDate}
+          onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
+          className={`${inputClass} cursor-pointer`}
+        />
+      </div>
+    </div>
+  </div>
+)}
           {form.allDay && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
@@ -1224,7 +1356,7 @@ function HorariosTab() {
               </div>
             </div>
           )}
-          {!form.allDay && (
+        {!form.allDay && !form.recurring && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horário específico (HH:MM)</label>
               <input type="time" value={form.time} onChange={e => setForm(p => ({ ...p, time: e.target.value }))} className={`${inputClass} cursor-pointer`} />
