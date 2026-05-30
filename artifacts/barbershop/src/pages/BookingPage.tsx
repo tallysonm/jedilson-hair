@@ -137,8 +137,16 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
     setDate(v); setTime("");
   };
 
-  const handleSingle = () => {
-    if (!name || !phone || !serviceId || !date || !time) return;
+const handleSingle = () => {
+  if (!name || !phone || !serviceId || !date || !time) return;
+  if (date < new Date().toISOString().split("T")[0]) {
+    toast({
+      title: "Data inválida",
+      description: "Não é possível agendar em data passada.",
+      variant: "destructive",
+    });
+    return;
+  }
     createMutation.mutate(
       { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null, paymentMethod, } },
       {
@@ -154,8 +162,17 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
     );
   };
 
-  const handleRecurring = () => {
-    if (!name || !phone || !serviceId || !time) return;
+const handleRecurring = () => {
+  if (!name || !phone || !serviceId || !time) return;
+
+  if (date && date < new Date().toISOString().split("T")[0]) {
+    toast({
+      title: "Data inválida",
+      description: "Não é possível agendar em data passada.",
+      variant: "destructive",
+    });
+    return;
+  }
     createRecurringMutation.mutate(
       { data: { clientName: name, clientPhone: phone, serviceId, time, weekday: parseInt(weekday, 10), period, startDate: new Date().toISOString().split("T")[0], barberId: barberId !== "all" ? barberId : null, paymentMethod:"dinheiro" }},
       {
