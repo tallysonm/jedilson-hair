@@ -193,9 +193,11 @@ export interface CreateRecurringAppointmentBody {
   /** Day of week: 0=Sunday, 1=Monday, ... 6=Saturday */
   weekday: number;
   period: CreateRecurringAppointmentBodyPeriod;
-  /** Reference date to determine current month (YYYY-MM-DD) */
-  startDate: string;
-  barberId?: string | null;
+/** Reference date to determine current month (YYYY-MM-DD) */
+startDate: string;
+/** Final date for custom recurrence range (YYYY-MM-DD) */
+endDate?: string;
+barberId?: string | null;
 }
 
 export interface RecurringAppointmentResult {

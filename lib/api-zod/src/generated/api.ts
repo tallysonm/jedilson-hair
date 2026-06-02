@@ -285,11 +285,11 @@ export const CreateRecurringAppointmentsBody = zod.object({
   weekday: zod
     .number()
     .describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
-  period: zod.enum(["this_month", "next_2_months"]),
   startDate: zod
-    .string()
-    .describe("Reference date to determine current month (YYYY-MM-DD)"),
-  barberId: zod.string().nullish(),
+  .string()
+  .describe("Reference date to determine current month (YYYY-MM-DD)"),
+endDate: zod.string().optional(),
+barberId: zod.string().nullish(),
 });
 
 /**

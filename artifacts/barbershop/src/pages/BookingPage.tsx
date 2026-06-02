@@ -30,10 +30,6 @@ const WEEKDAYS = [
   { value: "5", label: "Sexta-feira",  short: "Sex" },
   { value: "6", label: "Sábado",       short: "Sáb" },
 ];
-const PERIOD_OPTIONS = [
-  { value: "this_month",    label: "Este mês" },
-  { value: "next_2_months", label: "Próximos 2 meses" },
-];
 function generate30minSlots(openHour: number, closeHour: number): string[] {
   const slots: string[] = [];
   let cur = openHour * 60;
@@ -82,7 +78,6 @@ export default function BookingPage() {
   const [step, setStep]               = useState(0);
   const [serviceId, setServiceId]     = useState("");
   const [barberId, setBarberId]       = useState("all");
-  const [isRecurring, setIsRecurring] = useState(false);
 
   // Pre-select barber when arriving from /barbeiro/:id
   useEffect(() => {
@@ -94,7 +89,6 @@ export default function BookingPage() {
   const [date, setDate]               = useState("");
   const [time, setTime]               = useState("");
   const [weekday, setWeekday]         = useState("4");
-  const [period, setPeriod]           = useState<"this_month"|"next_2_months">("this_month");
   const [name, setName]               = useState("");
   const [phone, setPhone]             = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"dinheiro" | "pix_cartao">("dinheiro");
@@ -108,11 +102,10 @@ export default function BookingPage() {
 
   const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(slotParams, {
-    query: { enabled: !isRecurring && !!date && !!serviceId, queryKey: getGetAvailableSlotsQueryKey(slotParams) },
+    query: { enabled: !!date && !!serviceId, queryKey: getGetAvailableSlotsQueryKey(slotParams) },
   });
   const createMutation          = useCreateAppointment();
-  const createRecurringMutation = useCreateRecurringAppointments();
-  const isPending = createMutation.isPending || createRecurringMutation.isPending;
+  const isPending = createMutation.isPending;
 
   const safeServices = Array.isArray(services) ? services : [];
   console.log("SERVICES:", services, "SAFE:", safeServices);
@@ -156,34 +149,11 @@ const handleSingle = () => {
     );
   };
 
-const handleRecurring = () => {
-  if (!name || !phone || !serviceId || !time) return;
-
-  if (date && date < new Date().toISOString().split("T")[0]) {
-    toast({
-      title: "Data inválida",
-      description: "Não é possível agendar em data passada.",
-      variant: "destructive",
-    });
-    return;
-  }
-    createRecurringMutation.mutate(
-      { data: { clientName: name, clientPhone: phone, serviceId, time, weekday: parseInt(weekday, 10), period, startDate: new Date().toISOString().split("T")[0], barberId: barberId !== "all" ? barberId : null, paymentMethod:"dinheiro" }},
-      {
-        onSuccess: (result) => {
-          if (result.created.length === 0) { toast({ title: "Sem disponibilidade", description: "Todas as datas estão ocupadas.", variant: "destructive" }); return; }
-          setSuccessData({ type: "recurring", created: result.created.map((a) => a.date), skipped: result.skipped.length, serviceName: selectedService?.name || "", time, name });
-        },
-        onError: () => toast({ title: "Erro ao criar recorrência.", variant: "destructive" }),
-      }
-    );
-  };
-
   const resetForm = () => {
     setStep(0); setServiceId("");
     setBarberId(activeBarbers.length === 1 ? String(activeBarbers[0].id) : "all");
     setIsRecurring(false);
-    setDate(""); setTime(""); setWeekday("4"); setPeriod("this_month");
+    setDate(""); setTime(""); setWeekday("4");
     setName(""); setPhone(""); setSuccessData(null);
   };
 
@@ -528,27 +498,8 @@ const handleRecurring = () => {
                 </div>
 
                 {/* Toggle single / recurring */}
-                <div className="grid grid-cols-1 gap-2 mb-6 p-1 rounded-2xl bg-white/[0.025] border border-white/6">
-                  {[
-                    { value: false, icon: CalendarDays, label: "Único" },
-                    
-                  ].map((opt) => (
-                    <button key={String(opt.value)} type="button"
-                      onClick={() => { setIsRecurring(opt.value); setDate(""); setTime(""); }}
-                      className={`flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold transition-all ${
-                        isRecurring === opt.value
-                          ? "bg-accent/90 text-white shadow-lg shadow-accent/20"
-                          : "text-muted-foreground hover:text-white"
-                      }`}
-                      data-testid={`toggle-recurring-${opt.value}`}
-                    >
-                      <opt.icon className="w-4 h-4" />{opt.label}
-                    </button>
-                  ))}
-                </div>
 
                 <AnimatePresence mode="wait">
-                  {!isRecurring ? (
                     <motion.div key="single" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
                       {/* Date picker */}
                       <div className="rounded-2xl border border-white/8 bg-white/[0.025] overflow-hidden">
@@ -661,23 +612,11 @@ const handleRecurring = () => {
                         </div>
                       </div>
 
-                      {/* Period */}
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-5">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Período</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {PERIOD_OPTIONS.map((opt) => (
-                            <button key={opt.value} type="button" onClick={() => setPeriod(opt.value as typeof period)}
-                              className={`h-11 rounded-xl text-sm font-bold border transition-all ${
-                                period === opt.value ? "border-gold/40 text-gold bg-gold/8" : "bg-white/4 border-white/7 text-muted-foreground hover:bg-white/8"
-                              }`} data-testid={`period-${opt.value}`}>{opt.label}</button>
-                          ))}
-                        </div>
-                      </div>
                     </motion.div>
-                  )}
+                  
                 </AnimatePresence>
 
-                {((!isRecurring && date && time) || (isRecurring && time)) && (
+                {date && time && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
                     <PremiumButton onClick={() => setStep(3)} label="Continuar" />
                   </motion.div>
@@ -720,22 +659,7 @@ const handleRecurring = () => {
                       <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Barbeiro</p>
                       <p className="font-semibold text-white text-sm">{selectedBarber?.name ?? "Qualquer disponível"}</p>
                     </div>
-                    {isRecurring ? (
-                      <>
-                        <div className="px-5 py-4 border-b border-white/5">
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Dia</p>
-                          <p className="font-semibold text-white text-sm">{WEEKDAYS.find((d) => d.value === weekday)?.label}</p>
-                        </div>
-                        <div className="px-5 py-4">
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Horário</p>
-                          <p className="font-semibold text-white text-sm">{time}</p>
-                        </div>
-                        <div className="px-5 py-4">
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Período</p>
-                          <p className="font-semibold text-white text-sm">{PERIOD_OPTIONS.find((p) => p.value === period)?.label}</p>
-                        </div>
-                      </>
-                    ) : (
+
                       <>
                         <div className="px-5 py-4 border-b border-white/5">
                           <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Data</p>
@@ -746,7 +670,6 @@ const handleRecurring = () => {
                           <p className="font-semibold text-white text-sm">{time}</p>
                         </div>
                       </>
-                    )}
                   </div>
                 </div>
 
@@ -814,8 +737,8 @@ const handleRecurring = () => {
 
                 <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                   <PremiumButton
-                    onClick={isRecurring ? handleRecurring : handleSingle}
-                    label={isPending ? "Confirmando..." : isRecurring ? "Criar Agendamentos Recorrentes" : "Confirmar Agendamento"}
+                    onClick={handleSingle}
+                    label={isPending ? "Confirmando..." : "Confirmar Agendamento"}
                     disabled={isPending || !name || !phone}
                   />
                 </motion.div>

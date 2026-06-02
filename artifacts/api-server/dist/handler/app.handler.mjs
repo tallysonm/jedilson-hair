@@ -37567,8 +37567,8 @@ var CreateRecurringAppointmentsBody = objectType({
   time: stringType(),
   paymentMethod: enumType(["dinheiro", "pix_cartao"]).optional(),
   weekday: numberType().describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
-  period: enumType(["this_month", "next_2_months"]),
   startDate: stringType().describe("Reference date to determine current month (YYYY-MM-DD)"),
+  endDate: stringType().optional(),
   barberId: stringType().nullish()
 });
 var ExportAppointmentsQueryParams = objectType({
