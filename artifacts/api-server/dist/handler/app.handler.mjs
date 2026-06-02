@@ -56579,8 +56579,6 @@ async function getServiceFromDb2(serviceId) {
 }
 router4.post("/", async (req, res) => {
   const { clientName, clientPhone, serviceId, time: time4, weekday, startDate, endDate, barberId, paymentMethod } = req.body;
-  console.log("RECURRING BODY:", req.body);
-  console.log("FIELDS:", { clientName, clientPhone, serviceId, time: time4, weekday, startDate, endDate, barberId, paymentMethod });
   if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !startDate || !endDate) {
     res.status(400).json({ error: "Invalid request body" });
     return;

@@ -65,8 +65,6 @@ router.post("/", async (req, res) => {
   weekday: number; startDate: string; endDate: string; barberId?: string; paymentMethod?: "dinheiro" | "pix_cartao";
 };
 
-console.log("RECURRING BODY:", req.body);
-console.log("FIELDS:", { clientName, clientPhone, serviceId, time, weekday, startDate, endDate, barberId, paymentMethod });
   if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !startDate || !endDate) {
     res.status(400).json({ error: "Invalid request body" });
     return;
