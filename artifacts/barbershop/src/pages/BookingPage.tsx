@@ -528,10 +528,10 @@ const handleRecurring = () => {
                 </div>
 
                 {/* Toggle single / recurring */}
-                <div className="grid grid-cols-2 gap-2 mb-6 p-1 rounded-2xl bg-white/[0.025] border border-white/6">
+                <div className="grid grid-cols-1 gap-2 mb-6 p-1 rounded-2xl bg-white/[0.025] border border-white/6">
                   {[
                     { value: false, icon: CalendarDays, label: "Único" },
-                    { value: true,  icon: Repeat2,      label: "Semanal fixo" },
+                    
                   ].map((opt) => (
                     <button key={String(opt.value)} type="button"
                       onClick={() => { setIsRecurring(opt.value); setDate(""); setTime(""); }}
