@@ -37566,9 +37566,9 @@ var CreateRecurringAppointmentsBody = objectType({
   serviceId: stringType(),
   time: stringType(),
   paymentMethod: enumType(["dinheiro", "pix_cartao"]).optional(),
-  weekday: numberType().describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
-  period: enumType(["this_month", "next_2_months"]),
-  startDate: stringType().describe("Reference date to determine current month (YYYY-MM-DD)"),
+  weekday: numberType(),
+  startDate: stringType(),
+  endDate: stringType(),
   barberId: stringType().nullish()
 });
 var ExportAppointmentsQueryParams = objectType({
@@ -56561,30 +56561,17 @@ function getMaxAllowedDate2() {
   const max = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
   return max.toISOString().split("T")[0];
 }
-function generateRecurringDates(weekday, period, startDate) {
-  const ref = /* @__PURE__ */ new Date(startDate + "T12:00:00");
-  const dates = [];
-  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  const maxDate = getMaxAllowedDate2();
-  const months = [];
-  months.push({ year: ref.getFullYear(), month: ref.getMonth() });
-  if (period === "next_2_months") {
-    for (let i = 1; i <= 2; i++) {
-      const d = new Date(ref.getFullYear(), ref.getMonth() + i, 1);
-      months.push({ year: d.getFullYear(), month: d.getMonth() });
-    }
-  }
-  for (const { year, month } of months) {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-      const candidate = new Date(year, month, day);
-      if (candidate.getDay() === weekday) {
-        const iso = candidate.toISOString().split("T")[0];
-        if (iso >= today && iso <= maxDate) dates.push(iso);
-      }
-    }
-  }
-  return dates;
+function generateRecurringDates(weekday, startDate, endDate) {
+const start = new Date(startDate + "T12:00:00");
+const end = new Date(endDate + "T12:00:00");
+const dates = [];
+if (end < start) return dates;
+let current = new Date(start);
+while (current <= end) {
+  if (current.getDay() === weekday) dates.push(current.toISOString().split("T")[0]);
+  current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+}
+return dates;
 }
 function generateGroupId() {
   return `grp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -56594,21 +56581,17 @@ async function getServiceFromDb2(serviceId) {
   return svc ?? null;
 }
 router4.post("/", async (req, res) => {
-  const { clientName, clientPhone, serviceId, time: time4, weekday, period, startDate, barberId, paymentMethod } = req.body;
-  if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !period || !startDate) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-  if (!["this_month", "next_2_months"].includes(period)) {
-    res.status(400).json({ error: "Invalid period" });
-    return;
-  }
+  const { clientName, clientPhone, serviceId, time: time4, weekday, startDate, endDate, barberId, paymentMethod } = req.body;
+if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !startDate || !endDate) {
+  res.status(400).json({ error: "Invalid request body" });
+  return;
+}
   const service = await getServiceFromDb2(serviceId);
   if (!service) {
     res.status(400).json({ error: "Servi\xE7o inv\xE1lido" });
     return;
   }
-  const targetDates = generateRecurringDates(weekday, period, startDate);
+  const targetDates = generateRecurringDates(weekday, startDate, endDate);
   if (targetDates.length === 0) {
     res.status(400).json({ error: "Nenhuma data dispon\xEDvel no per\xEDodo selecionado" });
     return;
