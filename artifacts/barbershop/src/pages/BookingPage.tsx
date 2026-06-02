@@ -579,40 +579,6 @@ const handleSingle = () => {
                       </AnimatePresence>
                     </motion.div>
                   ) : (
-                    <motion.div key="recurring" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
-                      <div className="flex gap-2 px-4 py-3 rounded-xl bg-blue-500/7 border border-blue-500/14">
-                        <CalendarDays className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                        <p className="text-xs text-blue-300/80 leading-relaxed">Agendamentos criados para todos os dias selecionados no período. Conflitos são ignorados automaticamente.</p>
-                      </div>
-
-                      {/* Weekday */}
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-5">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Dia da semana</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {WEEKDAYS.map((d) => (
-                            <button key={d.value} type="button" onClick={() => { setWeekday(d.value); setTime(""); }}
-                              className={`h-9 px-3 rounded-xl text-xs font-bold border transition-all ${
-                                weekday === d.value ? "bg-accent border-accent text-white" : "bg-white/4 border-white/7 text-muted-foreground hover:text-white hover:bg-white/8"
-                              }`} data-testid="select-weekday">{d.short}</button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Time */}
-                      <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-5">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Horário fixo</p>
-                        <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto">
-                          {(WEEKDAY_SLOTS[weekday] ?? WEEKDAY_SLOTS["2"]).map((slot) => (
-                            <motion.button key={slot} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
-                              onClick={() => setTime(slot)}
-                              className={`h-10 rounded-xl text-xs font-bold border transition-all ${
-                                time === slot ? "bg-accent border-accent text-white shadow-lg shadow-accent/30" : "bg-white/4 border-white/7 text-muted-foreground hover:bg-white/9 hover:text-white"
-                              }`} data-testid="select-recurring-time">{slot}</motion.button>
-                          ))}
-                        </div>
-                      </div>
-
-                    </motion.div>
                   
                 </AnimatePresence>
 

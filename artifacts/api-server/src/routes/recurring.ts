@@ -30,29 +30,23 @@ function getMaxAllowedDate(): string {
   return max.toISOString().split("T")[0];
 }
 
-function generateRecurringDates(weekday: number, period: "this_month" | "next_2_months", startDate: string): string[] {
-  const ref = new Date(startDate + "T12:00:00");
+function generateRecurringDates(weekday: number, startDate: string, endDate: string): string[] {
+  const start = new Date(startDate + "T12:00:00");
+  const end = new Date(endDate + "T12:00:00");
   const dates: string[] = [];
-  const today = new Date().toISOString().split("T")[0];
-  const maxDate = getMaxAllowedDate();
-  const months: Array<{ year: number; month: number }> = [];
-  months.push({ year: ref.getFullYear(), month: ref.getMonth() });
-  if (period === "next_2_months") {
-    for (let i = 1; i <= 2; i++) {
-      const d = new Date(ref.getFullYear(), ref.getMonth() + i, 1);
-      months.push({ year: d.getFullYear(), month: d.getMonth() });
+
+  if (end < start) return dates;
+
+  let current = new Date(start);
+
+  while (current <= end) {
+    if (current.getDay() === weekday) {
+      dates.push(current.toISOString().split("T")[0]);
     }
+
+    current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
   }
-  for (const { year, month } of months) {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let day = 1; day <= daysInMonth; day++) {
-      const candidate = new Date(year, month, day);
-      if (candidate.getDay() === weekday) {
-        const iso = candidate.toISOString().split("T")[0];
-        if (iso >= today && iso <= maxDate) dates.push(iso);
-      }
-    }
-  }
+
   return dates;
 }
 
@@ -66,27 +60,25 @@ async function getServiceFromDb(serviceId: string) {
 }
 
 router.post("/", async (req, res) => {
-  const { clientName, clientPhone, serviceId, time, weekday, period, startDate, barberId, paymentMethod } = req.body as {
-    clientName: string; clientPhone: string; serviceId: string; time: string;
-    weekday: number; period: "this_month" | "next_2_months"; startDate: string; barberId?: string | null; paymentMethod?: string | null;
-  };
+  const { clientName, clientPhone, serviceId, time, weekday, startDate, endDate, barberId, paymentMethod } = req.body as {
+  clientName: string; clientPhone: string; serviceId: string; time: string;
+  weekday: number; startDate: string; endDate: string; barberId?: string; paymentMethod?: "dinheiro" | "pix_cartao";
+};
 
-  if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !period || !startDate) {
+console.log("RECURRING BODY:", req.body);
+console.log("FIELDS:", { clientName, clientPhone, serviceId, time, weekday, startDate, endDate, barberId, paymentMethod });
+  if (!clientName || !clientPhone || !serviceId || !time || weekday == null || !startDate || !endDate) {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  if (!["this_month", "next_2_months"].includes(period)) {
-    res.status(400).json({ error: "Invalid period" });
-    return;
-  }
-
+  
   const service = await getServiceFromDb(serviceId);
   if (!service) {
     res.status(400).json({ error: "Serviço inválido" });
     return;
   }
 
-const targetDates = generateRecurringDates(weekday, period, startDate);
+const targetDates = generateRecurringDates(weekday, startDate, endDate);
 if (targetDates.length === 0) {
   res.status(400).json({ error: "Nenhuma data disponível no período selecionado" });
   return;
