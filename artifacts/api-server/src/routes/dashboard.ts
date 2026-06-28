@@ -2,8 +2,11 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { appointmentsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/require-admin";
 
 const router = Router();
+
+router.use(requireAdmin);
 
 function getTodayStr() {
   return new Date().toISOString().split("T")[0];

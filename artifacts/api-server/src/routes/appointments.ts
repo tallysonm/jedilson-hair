@@ -11,6 +11,7 @@ import {
   GetAvailableSlotsQueryParams,
 } from "@workspace/api-zod";
 import { eq, and, gte, lte, ne } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/require-admin";
 
 const router = Router();
 
@@ -174,7 +175,7 @@ if (weekday === 6) {
   res.json({ date, slots: available });
 });
 
-router.get("/export", async (req, res) => {
+router.get("/export", requireAdmin, async (req, res) => {
   const period = typeof req.query["period"] === "string" ? req.query["period"] : "all";
   const barberId = typeof req.query["barberId"] === "string" ? req.query["barberId"] : undefined;
 
@@ -222,7 +223,7 @@ router.get("/export", async (req, res) => {
   res.send("\uFEFF" + csv); // BOM for Excel compatibility
 });
 
-router.get("/", async (req, res) => {
+router.get("/", requireAdmin, async (req, res) => {
   const parsed = ListAppointmentsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query params" });
@@ -343,7 +344,7 @@ router.post("/", async (req, res) => {
   res.status(201).json(formatAppointment(created));
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", requireAdmin, async (req, res) => {
   const parsed = GetAppointmentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid ID" });
@@ -357,7 +358,7 @@ router.get("/:id", async (req, res) => {
   res.json(formatAppointment(row));
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", requireAdmin, async (req, res) => {
   const paramsParsed = UpdateAppointmentParams.safeParse(req.params);
   if (!paramsParsed.success) {
     res.status(400).json({ error: "Invalid ID" });
@@ -398,7 +399,7 @@ router.patch("/:id", async (req, res) => {
   res.json(formatAppointment(updated));
 });
 
-router.delete("/group/:groupId", async (req, res) => {
+router.delete("/group/:groupId", requireAdmin, async (req, res) => {
   const groupId = req.params["groupId"];
   if (!groupId) {
     res.status(400).json({ error: "Invalid group ID" });
@@ -408,7 +409,7 @@ router.delete("/group/:groupId", async (req, res) => {
   res.status(204).send();
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAdmin, async (req, res) => {
   const parsed = DeleteAppointmentParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid ID" });
