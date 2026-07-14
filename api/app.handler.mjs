@@ -56254,6 +56254,9 @@ function getDateRange(period) {
   return null;
 }
 var BUFFER_MINUTES = 0;
+function getOccupiedMinutes(durationMinutes) {
+  return Math.ceil(durationMinutes / 30) * 30;
+}
 function timeToMinutes(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -56267,7 +56270,8 @@ function generateTimeSlots(openHour, closeHour, durationMinutes) {
   const slots = [];
   let current = openHour * 60;
   const close = closeHour * 60;
-  while (current <= close - 30) {
+  const occupiedDuration = getOccupiedMinutes(durationMinutes);
+  while (current + occupiedDuration + BUFFER_MINUTES <= close) {
     slots.push(minutesToTime(current));
     current += 30;
   }
@@ -56311,6 +56315,7 @@ router3.get("/available-slots", async (req, res) => {
   }
   const service = await getServiceFromDb(serviceId);
   const duration3 = service ? service.durationMinutes : 30;
+  const occupiedDuration = getOccupiedMinutes(duration3);
   const allSlots = generateTimeSlots(hours.open, hours.close, duration3);
   const blockedTimes = await db.select({ time: blockedSlotsTable.time }).from(blockedSlotsTable).where(and(eq(blockedSlotsTable.date, date6), eq(blockedSlotsTable.allDay, false)));
   const blockedTimeSet = new Set(blockedTimes.map((b) => b.time).filter(Boolean));
@@ -56340,14 +56345,15 @@ router3.get("/available-slots", async (req, res) => {
   const bookedWindows = await Promise.all(booked.map(async (b) => {
     const existingService = await getServiceFromDb(b.serviceId);
     const existingDuration = existingService ? existingService.durationMinutes : 30;
+    const existingOccupiedDuration = getOccupiedMinutes(existingDuration);
     const start = timeToMinutes(b.time);
-    const end = start + existingDuration + BUFFER_MINUTES;
+    const end = start + existingOccupiedDuration + BUFFER_MINUTES;
     return { start, end };
   }));
   const available = allSlots.filter((slot) => {
     if (blockedTimeSet.has(slot)) return false;
     const slotStart = timeToMinutes(slot);
-    const slotEnd = slotStart + duration3 + BUFFER_MINUTES;
+    const slotEnd = slotStart + occupiedDuration + BUFFER_MINUTES;
     return !bookedWindows.some((w) => slotStart < w.end && slotEnd > w.start);
   });
   res.json({ date: date6, slots: available });
@@ -56444,7 +56450,7 @@ router3.post("/", async (req, res) => {
     return;
   }
   const newStart = timeToMinutes(time4);
-  const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
+  const newEnd = newStart + getOccupiedMinutes(service.durationMinutes) + BUFFER_MINUTES;
   const barberId = typeof req.body["barberId"] === "string" ? req.body["barberId"] : null;
   const conflictConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
   if (barberId) conflictConditions.push(eq(appointmentsTable.barberId, barberId));
@@ -56452,8 +56458,9 @@ router3.post("/", async (req, res) => {
   const hasOverlap = (await Promise.all(sameDayPending.map(async (b) => {
     const existingService = await getServiceFromDb(b.serviceId);
     const existingDuration = existingService ? existingService.durationMinutes : 30;
+    const existingOccupiedDuration = getOccupiedMinutes(existingDuration);
     const existingStart = timeToMinutes(b.time);
-    const existingEnd = existingStart + existingDuration + BUFFER_MINUTES;
+    const existingEnd = existingStart + existingOccupiedDuration + BUFFER_MINUTES;
     return newStart < existingEnd && newEnd > existingStart;
   }))).some(Boolean);
   if (hasOverlap) {
@@ -56545,6 +56552,9 @@ var appointments_default = router3;
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
 var BUFFER_MINUTES2 = 0;
+function getOccupiedMinutes2(durationMinutes) {
+  return Math.ceil(durationMinutes / 30) * 30;
+}
 function timeToMinutes2(t) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -56597,7 +56607,7 @@ if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !s
     return;
   }
   const newStart = timeToMinutes2(time4);
-  const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES2;
+  const newEnd = newStart + getOccupiedMinutes2(service.durationMinutes) + BUFFER_MINUTES2;
   const groupId = generateGroupId();
   const created = [];
   const skipped = [];
@@ -56617,8 +56627,9 @@ if (!clientName || !clientPhone || !serviceId || !time4 || weekday == null || !s
     const hasOverlap = (await Promise.all(sameDayPending.map(async (b) => {
       const s = await getServiceFromDb2(b.serviceId);
       const d = s ? s.durationMinutes : 30;
+      const occupiedD = getOccupiedMinutes2(d);
       const es = timeToMinutes2(b.time);
-      const ee = es + d + BUFFER_MINUTES2;
+      const ee = es + occupiedD + BUFFER_MINUTES2;
       return newStart < ee && newEnd > es;
     }))).some(Boolean);
     if (hasOverlap) {

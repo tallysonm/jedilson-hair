@@ -7,6 +7,10 @@ const router = Router();
 
 const BUFFER_MINUTES = 0;
 
+function getOccupiedMinutes(durationMinutes: number): number {
+  return Math.ceil(durationMinutes / 30) * 30;
+}
+
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
@@ -83,7 +87,7 @@ if (targetDates.length === 0) {
 }
 
   const newStart = timeToMinutes(time);
-  const newEnd = newStart + service.durationMinutes + BUFFER_MINUTES;
+  const newEnd = newStart + getOccupiedMinutes(service.durationMinutes) + BUFFER_MINUTES;
   const groupId = generateGroupId();
   const created: object[] = [];
   const skipped: string[] = [];
@@ -104,8 +108,9 @@ if (targetDates.length === 0) {
     const hasOverlap = (await Promise.all(sameDayPending.map(async b => {
       const s = await getServiceFromDb(b.serviceId);
       const d = s ? s.durationMinutes : 30;
+      const occupiedD = getOccupiedMinutes(d);
       const es = timeToMinutes(b.time);
-      const ee = es + d + BUFFER_MINUTES;
+      const ee = es + occupiedD + BUFFER_MINUTES;
       return newStart < ee && newEnd > es;
     }))).some(Boolean);
 
