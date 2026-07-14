@@ -56318,21 +56318,19 @@ router3.get("/available-slots", async (req, res) => {
   const occupiedDuration = getOccupiedMinutes(duration3);
   const allSlots = generateTimeSlots(hours.open, hours.close, duration3);
   const blockedTimes = await db.select({ time: blockedSlotsTable.time }).from(blockedSlotsTable).where(and(eq(blockedSlotsTable.date, date6), eq(blockedSlotsTable.allDay, false)));
-  const blockedTimeSet = new Set(blockedTimes.map((b) => b.time).filter(Boolean));
+  const blockedIntervals = blockedTimes.map((b) => b.time).filter((time4) => Boolean(time4)).map((time4) => {
+    const start = timeToMinutes(time4);
+    return { start, end: start + 30 };
+  });
   const weekday = (/* @__PURE__ */ new Date(`${date6}T12:00:00`)).getDay();
   if (weekday >= 2 || weekday === 0) {
-    blockedTimeSet.add("08:00");
+    blockedIntervals.push({ start: timeToMinutes("08:00"), end: timeToMinutes("08:30") });
   }
   if (weekday >= 2 && weekday <= 5) {
-    blockedTimeSet.add("11:30");
-    blockedTimeSet.add("12:00");
-    blockedTimeSet.add("12:30");
-    blockedTimeSet.add("13:00");
-    blockedTimeSet.add("13:30");
+    blockedIntervals.push({ start: timeToMinutes("11:30"), end: timeToMinutes("14:00") });
   }
   if (weekday === 6) {
-    blockedTimeSet.add("13:00");
-    blockedTimeSet.add("13:30");
+    blockedIntervals.push({ start: timeToMinutes("13:00"), end: timeToMinutes("14:00") });
   }
   const baseConditions = [eq(appointmentsTable.date, date6), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
@@ -56351,9 +56349,9 @@ router3.get("/available-slots", async (req, res) => {
     return { start, end };
   }));
   const available = allSlots.filter((slot) => {
-    if (blockedTimeSet.has(slot)) return false;
     const slotStart = timeToMinutes(slot);
     const slotEnd = slotStart + occupiedDuration + BUFFER_MINUTES;
+    if (blockedIntervals.some((b) => slotStart < b.end && slotEnd > b.start)) return false;
     return !bookedWindows.some((w) => slotStart < w.end && slotEnd > w.start);
   });
   res.json({ date: date6, slots: available });

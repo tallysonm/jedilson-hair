@@ -150,6 +150,15 @@ if (weekday === 6) {
   blockedTimeSet.add("13:30");
 }
 
+const blockedIntervals = Array.from(blockedTimeSet).map((blockedTime) => {
+  const start = timeToMinutes(String(blockedTime));
+
+  return {
+    start,
+    end: start + 30,
+  };
+});
+
   const baseConditions = [eq(appointmentsTable.date, date), ne(appointmentsTable.status, "cancelled")];
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
 
@@ -172,12 +181,20 @@ if (weekday === 6) {
     return { start, end };
   }));
 
-  const available = allSlots.filter(slot => {
-    if (blockedTimeSet.has(slot)) return false;
-    const slotStart = timeToMinutes(slot);
-    const slotEnd = slotStart + occupiedDuration + BUFFER_MINUTES;
-    return !bookedWindows.some(w => slotStart < w.end && slotEnd > w.start);
-  });
+  const available = allSlots.filter((slot) => {
+  const slotStart = timeToMinutes(slot);
+  const slotEnd = slotStart + occupiedDuration + BUFFER_MINUTES;
+
+  const overlapsBlockedInterval = blockedIntervals.some(
+    (blocked) => slotStart < blocked.end && slotEnd > blocked.start,
+  );
+
+  if (overlapsBlockedInterval) return false;
+
+  return !bookedWindows.some(
+    (booked) => slotStart < booked.end && slotEnd > booked.start,
+  );
+});
 
   res.json({ date, slots: available });
 });
