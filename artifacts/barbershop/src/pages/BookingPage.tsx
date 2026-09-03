@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
   MessageCircle, CheckCircle2, RefreshCw,
@@ -118,6 +118,7 @@ export default function BookingPage() {
   const [name, setName]               = useState("");
   const [phone, setPhone]             = useState("");
   const [email, setEmail]             = useState("");
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const [paymentMethod, setPaymentMethod] = useState<"dinheiro" | "pix_cartao">("dinheiro");
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
   const [displayedMonth, setDisplayedMonth] = useState<Date>(() => new Date());
@@ -175,6 +176,16 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
 
 const handleSingle = () => {
   if (!name || !phone || !serviceId || !date || !time) return;
+  if (!email.trim()) {
+    toast({
+      title: "E-mail obrigatório",
+      description: "Preencha seu e-mail para continuar com o agendamento.",
+      variant: "destructive",
+    });
+    emailInputRef.current?.focus();
+    emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
   if (date < new Date().toISOString().split("T")[0]) {
     toast({
       title: "Data inválida",
@@ -764,6 +775,8 @@ const handleSingle = () => {
     placeholder="seuemail@exemplo.com"
     value={email}
     onChange={(e) => setEmail(e.target.value)}
+    ref={emailInputRef}
+    required
   />
 </div>
 
