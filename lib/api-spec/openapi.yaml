@@ -768,6 +768,14 @@ components:
         status:
           type: string
           enum: [pending, completed, cancelled]
+        paymentMethod:
+          type: string
+          enum: [dinheiro, pix_cartao]
+          nullable: true
+        clientEmail:
+          type: string
+          format: email
+          nullable: true
         barberId:
           type: string
           nullable: true
@@ -790,12 +798,18 @@ components:
           type: string
         clientPhone:
           type: string
+        clientEmail:
+          type: string
+          format: email
         serviceId:
           type: string
         date:
           type: string
         time:
           type: string
+        paymentMethod:
+          type: string
+          enum: [dinheiro, pix_cartao]
         barberId:
           type: string
           nullable: true
@@ -811,6 +825,9 @@ components:
           type: string
         clientPhone:
           type: string
+        paymentMethod:
+          type: string
+          enum: [dinheiro, pix_cartao]
         serviceId:
           type: string
         date:
@@ -911,10 +928,16 @@ components:
         startDate:
           type: string
           description: Reference date to determine current month (YYYY-MM-DD)
+        endDate:
+          type: string
+          description: Final date of the recurrence range (YYYY-MM-DD)
+        paymentMethod:
+          type: string
+          enum: [dinheiro, pix_cartao]
         barberId:
           type: string
           nullable: true
-      required: [clientName, clientPhone, serviceId, time, weekday, period, startDate]
+      required: [clientName, clientPhone, serviceId, time, weekday, startDate, endDate]
 
     RecurringAppointmentResult:
       type: object

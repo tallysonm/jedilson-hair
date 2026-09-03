@@ -4,10 +4,17 @@ import {
   MessageCircle, CheckCircle2, RefreshCw,
   CalendarDays, ArrowLeft, Clock, Check, Repeat2,
   ChevronRight, User, Phone, Star, MapPin, Scissors,
+  Loader2, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { useMonthAvailability } from "@/hooks/useMonthAvailability";
+import { supabase } from "@/lib/supabase";
 import {
   useListServices,
   useGetAvailableSlots,
@@ -47,6 +54,14 @@ function getMaxDate(): string {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate()).toISOString().split("T")[0];
 }
+// Local (non-UTC) yyyy-mm-dd <-> Date helpers, used by the availability calendar
+function toLocalISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parseLocalISODate(s: string): Date {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
 function initials(name: string) {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 }
@@ -75,6 +90,17 @@ export default function BookingPage() {
   const search = useSearch();
   const { toast } = useToast();
 
+  const handleMyAccountClick = async () => {
+    const { data } = await supabase.auth.getSession();
+
+    if (data.session) {
+      setLocation("/minha-conta");
+      return;
+    }
+
+    setLocation("/login");
+  };
+
   const [step, setStep]               = useState(0);
   const [serviceId, setServiceId]     = useState("");
   const [barberId, setBarberId]       = useState("all");
@@ -91,14 +117,37 @@ export default function BookingPage() {
   const [weekday, setWeekday]         = useState("4");
   const [name, setName]               = useState("");
   const [phone, setPhone]             = useState("");
+  const [email, setEmail]             = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"dinheiro" | "pix_cartao">("dinheiro");
   const [successData, setSuccessData] = useState<SuccessData | null>(null);
+  const [displayedMonth, setDisplayedMonth] = useState<Date>(() => new Date());
 
   const { data: services = [] } = useListServices();
   const { data: barbers  = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
   const activeBarbers = Array.isArray(barbers)
   ? barbers.filter((b) => b.active)
   : []
+
+  const monthParam = `${displayedMonth.getFullYear()}-${String(displayedMonth.getMonth() + 1).padStart(2, "0")}`;
+  const monthAvailabilityParams = { month: monthParam, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
+  // gcTime: 0 drops the cached data as soon as this leaves step 2 (no observers),
+  // so re-enabling on re-entry always starts a fresh fetch — no manual refetch needed.
+  const monthAvailabilityQuery = useMonthAvailability(monthAvailabilityParams, step === 2 && !!serviceId);
+
+  const monthAvailabilityMap = new Map(
+    (monthAvailabilityQuery.data?.days ?? []).map((d) => [d.date, d.available] as const),
+  );
+  const todayISO = toLocalISODate(new Date());
+  const maxDateISO = getMaxDate();
+  const isCalendarBusy = monthAvailabilityQuery.isFetching;
+  const isCalendarError = monthAvailabilityQuery.isError;
+
+  const isCalendarDayDisabled = (d: Date) => {
+    const iso = toLocalISODate(d);
+    if (iso < todayISO || iso > maxDateISO) return true;
+    if (isCalendarBusy || isCalendarError) return true;
+    return !monthAvailabilityMap.get(iso);
+  };
 
   const slotParams = { date, serviceId, ...(barberId !== "all" ? { barberId } : {}) };
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlots(slotParams, {
@@ -135,7 +184,7 @@ const handleSingle = () => {
     return;
   }
     createMutation.mutate(
-      { data: { serviceId, date, time, clientName: name, clientPhone: phone, barberId: barberId !== "all" ? barberId : null, paymentMethod, } },
+      { data: { serviceId, date, time, clientName: name, clientPhone: phone, clientEmail: email, barberId: barberId !== "all" ? barberId : null, paymentMethod, } },
       {
         onSuccess: () => setSuccessData({
           type: "single", serviceName: selectedService?.name || "",
@@ -152,8 +201,8 @@ const handleSingle = () => {
   const resetForm = () => {
     setStep(0); setServiceId("");
     setBarberId(activeBarbers.length === 1 ? String(activeBarbers[0].id) : "all");
-    setIsRecurring(false);
     setDate(""); setTime(""); setWeekday("4");
+    setDisplayedMonth(new Date());
     setName(""); setPhone(""); setSuccessData(null);
   };
 
@@ -164,7 +213,7 @@ const handleSingle = () => {
   if (successData) {
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col">
-        <PageHeader onAdminClick={() => setLocation("/admin")} />
+        <PageHeader onAdminClick={() => setLocation("/admin")} onMyAccountClick={handleMyAccountClick} />
         <main className="flex-1 flex items-center justify-center p-5 py-16">
           <AnimatePresence mode="wait">
             {successData.type === "single" ? (
@@ -277,7 +326,7 @@ const handleSingle = () => {
 
   return (
     <div className="min-h-screen bg-[#080808] flex flex-col">
-      <PageHeader onAdminClick={() => setLocation("/admin")} />
+      <PageHeader onAdminClick={() => setLocation("/admin")} onMyAccountClick={handleMyAccountClick} />
 
       {/* ── Step indicator ── */}
       <div className="sticky top-16 z-40 bg-[#080808]/95 backdrop-blur-xl border-b border-white/5">
@@ -503,39 +552,60 @@ const handleSingle = () => {
                     <motion.div key="single" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
                       {/* Date picker */}
                       <div className="rounded-2xl border border-white/8 bg-white/[0.025] overflow-hidden">
-                        <div className="px-5 py-3 border-b border-white/6 flex items-center gap-2">
-                          <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escolha a data</span>
-                        </div>
-                        <div className="p-5">
-                          {/* Overlay pattern: styled display + invisible native input on top */}
-                          <div className="relative">
-                            <div className="flex items-center gap-3 py-1 pointer-events-none select-none">
-                              <div className="flex-1 min-w-0">
-                                {date ? (
-                                  <p className="text-white text-2xl font-bold font-display leading-tight">
-                                    {new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                                  </p>
-                                ) : (
-                                  <p className="text-muted-foreground text-lg">Toque para escolher</p>
-                                )}
-                              </div>
-                              <CalendarDays className="w-6 h-6 text-accent/60 shrink-0" />
-                            </div>
-                            <input
-                              type="date"
-                              min={new Date().toISOString().split("T")[0]}
-                              max={getMaxDate()}
-                              value={date}
-                              onChange={(e) => handleDateChange(e.target.value)}
-                              data-testid="input-date"
-                              style={{ colorScheme: "dark", fontSize: "16px" }}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
+                        <div className="px-5 py-3 border-b border-white/6 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escolha a data</span>
                           </div>
+                          {isCalendarBusy && (
+                            <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Atualizando...
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3 sm:p-5">
+                          {isCalendarError ? (
+                            <div className="flex flex-col items-center gap-3 py-8 text-center">
+                              <AlertCircle className="w-6 h-6 text-accent" />
+                              <p className="text-muted-foreground text-sm">Não foi possível carregar a disponibilidade do mês.</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => monthAvailabilityQuery.refetch()}
+                                className="border-white/10 text-white hover:bg-white/5 rounded-xl"
+                              >
+                                Tentar novamente
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="w-[90%] mx-auto">
+                              <Calendar
+                                mode="single"
+                                locale={ptBR}
+                                selected={date ? parseLocalISODate(date) : undefined}
+                                month={displayedMonth}
+                                onMonthChange={setDisplayedMonth}
+                                startMonth={parseLocalISODate(todayISO)}
+                                endMonth={parseLocalISODate(maxDateISO)}
+                                disabled={isCalendarDayDisabled}
+                                onSelect={(d) => { if (d) handleDateChange(toLocalISODate(d)); }}
+                                className="[--cell-size:2.25rem] sm:[--cell-size:3rem]"
+                                formatters={{
+                                  formatWeekdayName: (d) => {
+                                    const label = format(d, "EEE", { locale: ptBR });
+                                    return label.charAt(0).toUpperCase() + label.slice(1);
+                                  },
+                                }}
+                                data-testid="calendar-date"
+                              />
+                            </div>
+                          )}
                           {date && (
-                            <p className="text-muted-foreground text-sm mt-2 capitalize">
-                              {new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                            <p className="text-muted-foreground text-sm mt-2 px-2">
+                              {(() => {
+                                const label = format(parseLocalISODate(date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+                                return label.charAt(0).toUpperCase() + label.slice(1);
+                              })()}
                             </p>
                           )}
                         </div>
@@ -578,8 +648,6 @@ const handleSingle = () => {
                         )}
                       </AnimatePresence>
                     </motion.div>
-                  ) : (
-                  
                 </AnimatePresence>
 
                 {date && time && (
@@ -669,6 +737,17 @@ const handleSingle = () => {
   </div>
 
 <div className="space-y-2">
+  <Label htmlFor="email">E-mail</Label>
+  <Input
+    id="email"
+    type="email"
+    placeholder="seuemail@exemplo.com"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+  />
+</div>
+
+<div className="space-y-2">
   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
     Pagamento
   </p>
@@ -722,7 +801,13 @@ const handleSingle = () => {
 
 /* ══ Sub-components ══ */
 
-function PageHeader({ onAdminClick }: { onAdminClick: () => void }) {
+function PageHeader({
+  onAdminClick,
+  onMyAccountClick,
+}: {
+  onAdminClick: () => void;
+  onMyAccountClick: () => void;
+}) {
   const waPhone = useWaPhone();
   return (
     <header className="sticky top-0 z-50 w-full bg-[#080808]/95 backdrop-blur-xl border-b border-white/5">
@@ -738,6 +823,13 @@ function PageHeader({ onAdminClick }: { onAdminClick: () => void }) {
             <MessageCircle className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">WhatsApp</span>
           </a>
+          <button
+            onClick={onMyAccountClick}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-white transition-colors px-3 py-1.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/7"
+          >
+            <User className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Minha conta</span>
+          </button>
           <button onClick={onAdminClick}
             className="text-xs text-muted-foreground hover:text-white transition-colors px-3 py-1.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/7">
             Admin

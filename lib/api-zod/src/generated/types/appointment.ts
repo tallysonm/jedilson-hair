@@ -5,6 +5,7 @@
  * Gedilson Rai Barbershop API
  * OpenAPI spec version: 0.1.0
  */
+import type { AppointmentPaymentMethod } from "./appointmentPaymentMethod";
 import type { AppointmentStatus } from "./appointmentStatus";
 
 export interface Appointment {
@@ -17,6 +18,8 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  paymentMethod?: AppointmentPaymentMethod;
+  clientEmail?: string | null;
   barberId?: string | null;
   isRecurring: boolean;
   recurrenceType?: string | null;

@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { runAutoCompleteSweep } from "./lib/auto-complete";
 
 const app: Express = express();
 
@@ -28,6 +29,11 @@ app.use(
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Lazy sweep: keeps appointment statuses current without a cron job.
+app.use("/api", (_req, _res, next) => {
+  void runAutoCompleteSweep().finally(() => next());
+});
 
 app.use("/api", router);
 

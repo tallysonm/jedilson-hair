@@ -7,15 +7,18 @@
  */
 
 export * from "./appointment";
+export * from "./appointmentPaymentMethod";
 export * from "./appointmentStatus";
 export * from "./appSettings";
 export * from "./availableSlots";
 export * from "./barber";
 export * from "./blockedSlot";
 export * from "./createAppointmentBody";
+export * from "./createAppointmentBodyPaymentMethod";
 export * from "./createBarberBody";
 export * from "./createBlockedSlotBody";
 export * from "./createRecurringAppointmentBody";
+export * from "./createRecurringAppointmentBodyPaymentMethod";
 export * from "./createRecurringAppointmentBodyPeriod";
 export * from "./createServiceBody";
 export * from "./dashboardSummary";
@@ -35,6 +38,7 @@ export * from "./revenueChartEntry";
 export * from "./service";
 export * from "./servicesChartEntry";
 export * from "./updateAppointmentBody";
+export * from "./updateAppointmentBodyPaymentMethod";
 export * from "./updateAppointmentBodyStatus";
 export * from "./updateBarberBody";
 export * from "./updateServiceBody";

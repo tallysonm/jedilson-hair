@@ -3,9 +3,13 @@ import { AdminLoginBody } from "@workspace/api-zod";
 
 const router = Router();
 
-const ADMIN_USERNAME = "jedilson";
-const ADMIN_PASSWORD = "jss918216";
-const ADMIN_TOKEN = "barbershop-admin-token-secret";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+if (!ADMIN_USERNAME || !ADMIN_PASSWORD || !ADMIN_TOKEN) {
+  throw new Error("Missing required Admin authentication environment variables.");
+}
 
 router.post("/login", (req, res) => {
   const parsed = AdminLoginBody.safeParse(req.body);

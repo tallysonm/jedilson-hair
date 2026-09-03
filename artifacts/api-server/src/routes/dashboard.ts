@@ -8,27 +8,47 @@ const router = Router();
 
 router.use(requireAdmin);
 
+const SP_TIME_ZONE = "America/Sao_Paulo";
+
+// en-CA renders as YYYY-MM-DD, matching the text format stored in appointments.date
+const spDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: SP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function formatDateStr(d: Date) {
+  const year = String(d.getUTCFullYear()).padStart(4, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Current calendar date in America/Sao_Paulo, shifted by `offsetDays`. */
+function getSpDateStr(offsetDays = 0) {
+  const [year, month, day] = spDateFormatter.format(new Date()).split("-").map(Number);
+  // Noon UTC keeps the arithmetic away from any DST/offset boundary.
+  return formatDateStr(new Date(Date.UTC(year!, month! - 1, day! + offsetDays, 12)));
+}
+
 function getTodayStr() {
-  return new Date().toISOString().split("T")[0];
+  return getSpDateStr();
 }
 
 function getTomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
+  return getSpDateStr(1);
 }
 
 function getMonthRange() {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+  const [year, month] = getTodayStr().split("-").map(Number);
+  const start = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`;
+  const end = formatDateStr(new Date(Date.UTC(year!, month!, 0, 12)));
   return { start, end };
 }
 
 function getNDaysAgoStr(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split("T")[0];
+  return getSpDateStr(-n);
 }
 
 router.get("/summary", async (_req, res) => {
@@ -108,9 +128,7 @@ router.get("/revenue-chart", async (_req, res) => {
   // Fill in all 30 days (including days with zero activity)
   const result = [];
   for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = getNDaysAgoStr(i);
     const entry = dataMap.get(dateStr);
     result.push({
       date: dateStr,

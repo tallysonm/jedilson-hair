@@ -8,6 +8,7 @@ import dashboardRouter from "./dashboard";
 import barbersRouter from "./barbers";
 import blockedSlotsRouter from "./blocked-slots";
 import settingsRouter from "./settings";
+import customerRouter from "./customer";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/appointments", appointmentsRouter);
 router.use("/auth", authRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/settings", settingsRouter);
+router.use("/customer", customerRouter);
 
 export default router;

@@ -13,10 +13,21 @@ function run(cmd) {
 // 1. Install dependencies
 run("pnpm install");
 
-// 2. Build frontend
+// 2. Build backend and publish the generated Vercel handler
+run("pnpm --filter @workspace/api-server run build");
+
+const generatedHandler = resolve(ROOT, "artifacts/api-server/dist/handler/app.handler.mjs");
+const vercelHandler = resolve(ROOT, "api/app.handler.mjs");
+if (!existsSync(generatedHandler)) {
+  throw new Error(`[build] Generated backend handler not found: ${generatedHandler}`);
+}
+cpSync(generatedHandler, vercelHandler);
+console.log("[build] Copied backend handler to", vercelHandler);
+
+// 3. Build frontend
 run("pnpm --filter @workspace/barbershop run build");
 
-// 3. Find where Vite put the output (search for index.html)
+// 4. Find where Vite put the output (search for index.html)
 const candidates = [
   resolve(ROOT, "artifacts/barbershop/dist"),
   resolve(ROOT, "artifacts/api-server/dist"),
@@ -39,7 +50,7 @@ if (!src) {
   process.exit(1);
 }
 
-// 4. Copy to root dist/
+// 5. Copy to root dist/
 const dest = resolve(ROOT, "dist");
 if (src !== dest) {
   rmSync(dest, { recursive: true, force: true });

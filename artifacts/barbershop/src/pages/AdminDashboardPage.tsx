@@ -7,7 +7,7 @@ import {
   MessageCircle, Instagram, Phone, Cake, FileText, Camera,
   ChevronDown, ChevronUp, Bell, Scissors, Ban, Download,
   Tag, Clock, AlertCircle, CalendarOff, RefreshCw, CheckCircle2,
-  Settings,
+  Settings, Search,
 } from "lucide-react";
 import {
   useGetDashboardSummary, getGetDashboardSummaryQueryKey,
@@ -17,8 +17,6 @@ import {
   useUpdateAppointment,   useDeleteAppointment,
   useDeleteRecurringGroup, useListServices, getListServicesQueryKey,
   useCreateService, useUpdateService, useDeleteService,
-  useCreateAppointment,
-  useGetAvailableSlots,   getGetAvailableSlotsQueryKey,
   useListBarbers,         getListBarbersQueryKey,
   useCreateBarber,        useUpdateBarber,               
   useCreateRecurringAppointments,
@@ -331,6 +329,9 @@ function CalendarTab() {
 ══════════════════════════════════════════════ */
 function AppointmentsTab() {
   const [period, setPeriod] = useState<"day"|"week"|"month"|undefined>(undefined);
+  const [viewMode, setViewMode] = useState<"active"|"history">("active");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [barberId, setBarberId] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<{id:number;groupId:string|null;isRecurring:boolean}|null>(null);
   const [editingAppointment, setEditingAppointment] = useState<any | null>(null);
@@ -338,8 +339,8 @@ function AppointmentsTab() {
   const { toast } = useToast();
   const { data: barbers = [] } = useListBarbers({ query: { queryKey: getListBarbersQueryKey() } });
   const {data:services=[]}=useListServices();
-  const params = { ...(period?{period}:{}), ...(barberId!=="all"?{barberId}:{}) };
-  const { data: appointments = [] } = useListAppointments(params, { query: { queryKey: getListAppointmentsQueryKey(params) } });
+  const params = { ...(barberId!=="all"?{barberId}:{}) };
+  const { data: allAppointments = [] } = useListAppointments(params, { query: { queryKey: getListAppointmentsQueryKey(params) } });
   const updateMutation = useUpdateAppointment();
   const deleteMutation = useDeleteAppointment();
   const groupDeleteMutation = useDeleteRecurringGroup();
@@ -364,11 +365,171 @@ const handleSavePayment = () => {
   const FILTERS: {label:string;value:typeof period}[] = [{label:"Todos",value:undefined},{label:"Hoje",value:"day"},{label:"Semana",value:"week"},{label:"Mês",value:"month"}];
   const ss = (s:string) => s==="completed"?"bg-emerald-500/10 text-emerald-400 border-emerald-500/20":s==="cancelled"?"bg-gray-500/10 text-gray-400 border-gray-500/20":"bg-amber-500/10 text-amber-400 border-amber-500/20";
   const sl = (s:string) => s==="completed"?"Concluído":s==="cancelled"?"Cancelado":"Pendente";
+  const now = new Date();
+  const getAppointmentDateTime = (apt: { date: string; time: string }) => new Date(`${apt.date}T${apt.time}:00`);
+
+  const getPeriodBounds = () => {
+    if (!period) return null;
+
+    const start = new Date(now);
+    const end = new Date(now);
+
+    if (period === "day") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    if (period === "week") {
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - now.getDay());
+
+      end.setTime(start.getTime());
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+
+    end.setFullYear(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
+  const periodBounds = getPeriodBounds();
+  const matchesSelectedPeriod = (apt: { date: string; time: string }) => {
+    if (!periodBounds) return true;
+    const when = getAppointmentDateTime(apt);
+    return when >= periodBounds.start && when <= periodBounds.end;
+  };
+
+  const activeAppointments = allAppointments
+    .filter((apt) => apt.status === "pending")
+    .filter((apt) => getAppointmentDateTime(apt) >= now)
+    .filter(matchesSelectedPeriod)
+    .sort((a, b) => getAppointmentDateTime(a).getTime() - getAppointmentDateTime(b).getTime());
+
+  const historyAppointments = allAppointments
+    .filter((apt) => apt.status === "completed" || apt.status === "cancelled" || getAppointmentDateTime(apt) < now)
+    .filter(matchesSelectedPeriod)
+    .sort((a, b) => getAppointmentDateTime(b).getTime() - getAppointmentDateTime(a).getTime());
+
+  const appointments = viewMode === "active" ? activeAppointments : historyAppointments;
+  const trimmedSearchTerm = searchTerm.trim();
+  const normalizedSearch = trimmedSearchTerm.toLowerCase();
+  const filteredAppointments = appointments.filter((apt) => {
+    if (!normalizedSearch) return true;
+    return apt.clientName.trim().toLowerCase().includes(normalizedSearch);
+  });
+  const exportParams = new URLSearchParams();
+  exportParams.set("view", viewMode);
+  exportParams.set("period", period ?? "all");
+  if (barberId !== "all") {
+    exportParams.set("barberId", barberId);
+  }
+  if (trimmedSearchTerm) {
+    exportParams.set("search", trimmedSearchTerm);
+  }
+  const exportHref = `/api/appointments/export?${exportParams.toString()}`;
+
+  const getFilenameFromDisposition = (contentDisposition: string | null, fallback: string) => {
+    if (!contentDisposition) return fallback;
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1].replace(/['"]/g, "").trim());
+      } catch {
+        return utf8Match[1].replace(/['"]/g, "").trim();
+      }
+    }
+
+    const basicMatch = contentDisposition.match(/filename=([^;]+)/i);
+    if (basicMatch?.[1]) {
+      return basicMatch[1].replace(/['"]/g, "").trim();
+    }
+
+    return fallback;
+  };
+
+  const handleExportCsv = async () => {
+    if (isExportingCsv) return;
+
+    const adminToken = localStorage.getItem("adminToken");
+    if (!adminToken) {
+      toast({
+        title: "Sessão expirada",
+        description: "Faça login novamente para exportar o CSV.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExportingCsv(true);
+
+    try {
+      const response = await fetch(exportHref, {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        toast({
+          title: "Não foi possível exportar",
+          description: "Falha ao gerar o CSV. Tente novamente em instantes.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get("content-disposition");
+      const fallbackName = `${viewMode === "history" ? "historico-agendamentos" : "agendamentos"}.csv`;
+      const fileName = getFilenameFromDisposition(contentDisposition, fallbackName);
+
+      const objectUrl = URL.createObjectURL(blob);
+      const tempLink = document.createElement("a");
+      tempLink.href = objectUrl;
+      tempLink.download = fileName;
+      tempLink.style.display = "none";
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível baixar o arquivo CSV agora.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
+
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-wrap">
         <SectionHeader title="Agendamentos" />
         <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex bg-white/4 rounded-xl p-1 border border-white/7 gap-1">
+            <button
+              onClick={() => setViewMode("active")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "active" ? "bg-accent text-white shadow" : "text-muted-foreground hover:text-white"}`}
+            >
+              Agendamentos
+            </button>
+            <button
+              onClick={() => setViewMode("history")}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "history" ? "bg-accent text-white shadow" : "text-muted-foreground hover:text-white"}`}
+            >
+              Histórico
+            </button>
+          </div>
           <div className="flex bg-white/4 rounded-xl p-1 border border-white/7 gap-1">
             {FILTERS.map((f)=><button key={f.label} onClick={()=>setPeriod(f.value)} className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${period===f.value?"bg-accent text-white shadow":"text-muted-foreground hover:text-white"}`} data-testid={`filter-${f.value||"all"}`}>{f.label}</button>)}
           </div>
@@ -379,14 +540,26 @@ const handleSavePayment = () => {
               {barbers.filter((b)=>b.active).map((b)=><SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <a
-            href={`/api/appointments/export?period=${period ?? "all"}${barberId !== "all" ? `&barberId=${barberId}` : ""}`}
-            download
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={isExportingCsv}
             className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-gold/8 hover:bg-gold/15 text-gold border border-gold/20 text-xs font-semibold transition-colors"
             title="Exportar CSV"
           >
-            <Download className="w-3.5 h-3.5" /> Exportar CSV
-          </a>
+            <Download className="w-3.5 h-3.5" /> {isExportingCsv ? "Exportando..." : "Exportar CSV"}
+          </button>
+        </div>
+      </div>
+      <div className="w-full sm:max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar cliente..."
+            className="bg-white/5 border-white/8 h-10 rounded-xl text-white pl-10 placeholder:text-muted-foreground"
+          />
         </div>
       </div>
       <div className="glass-card rounded-2xl overflow-hidden">
@@ -394,8 +567,8 @@ const handleSavePayment = () => {
           <table className="w-full text-left border-collapse">
             <thead><tr className="border-b border-white/6">{["Cliente","Serviço","Data / Hora","Barbeiro","Valor","Pagamento","Status",""].map((h)=><th key={h} className="px-5 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>)}</tr></thead>
             <tbody>
-              {appointments.length===0?<tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">Nenhum agendamento encontrado.</td></tr>:
-              appointments.map((apt)=>(
+              {filteredAppointments.length===0?<tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">{viewMode === "active" ? "Nenhum agendamento ativo encontrado." : "Nenhum agendamento no histórico."}</td></tr>:
+              filteredAppointments.map((apt)=>(
                 <tr key={apt.id} className="border-b border-white/4 hover:bg-white/3 transition-colors group">
                   <td className="px-5 py-4"><div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center text-[11px] font-bold text-muted-foreground shrink-0">{apt.clientName.split(" ").map((w:string)=>w[0]).slice(0,2).join("")}</div><div><div className="flex items-center gap-1.5"><span className="font-semibold text-white text-sm">{apt.clientName}</span>{apt.isRecurring&&<span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-500/12 text-blue-400 border border-blue-500/20 tracking-wide">RECORRENTE</span>}</div><div className="text-xs text-muted-foreground">{apt.clientPhone}</div></div></div></td>
                   <td className="px-5 py-4 text-sm text-muted-foreground max-w-[160px] truncate">{apt.serviceName}</td>
@@ -492,6 +665,7 @@ function generate30minSlots(openHour:number,closeHour:number):string[]{const slo
 const applyPermanentBlocks=(weekday:string,slots:string[])=>slots.filter(slot=>{if(slot==="08:00")return false;if(["2","3","4","5"].includes(weekday)&&["11:30","12:00","12:30","13:00","13:30"].includes(slot))return false;if(weekday==="6"&&["13:00","13:30"].includes(slot))return false;return true;});
 const ADMIN_WEEKDAY_SLOTS:Record<string,string[]>={"0":applyPermanentBlocks("0",generate30minSlots(6.5,21)),"2":applyPermanentBlocks("2",generate30minSlots(6.5,21)),"3":applyPermanentBlocks("3",generate30minSlots(6.5,21)),"4":applyPermanentBlocks("4",generate30minSlots(6.5,21)),"5":applyPermanentBlocks("5",generate30minSlots(6.5,21)),"6":applyPermanentBlocks("6",generate30minSlots(6.5,21))};
 function getMaxDate(){const now=new Date();return new Date(now.getFullYear(),now.getMonth()+3,now.getDate()).toISOString().split("T")[0];}
+const TIME_HHMM_RE=/^([01]\d|2[0-3]):[0-5]\d$/;
 type AdminRecurringResult={groupId:string;created:string[];skipped:number;time:string};
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -504,20 +678,34 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 function NewAppointmentTab({onComplete}:{onComplete:()=>void}){
   const {data:services=[]}=useListServices();
   const {data:barbers=[]}=useListBarbers({query:{queryKey:getListBarbersQueryKey()}});
-  const createMutation=useCreateAppointment();
   const createRecurringMutation=useCreateRecurringAppointments();
   const {toast}=useToast();
   const qc=useQueryClient();
-  const [name,setName]=useState("");const [phone,setPhone]=useState("");const [serviceId,setServiceId]=useState("");const [barberId,setBarberId]=useState("all");const [date,setDate]=useState("");const [endDate,setEndDate]=useState("");const [time,setTime]=useState("");const [isRecurring,setIsRecurring]=useState(false);const [weekday,setWeekday]=useState("4"); const [paymentMethod,setPaymentMethod]=useState<"dinheiro"|"pix_cartao">("dinheiro");const [result,setResult]=useState<AdminRecurringResult|null>(null);
+  const [name,setName]=useState("");const [phone,setPhone]=useState("");const [serviceId,setServiceId]=useState("");const [barberId,setBarberId]=useState("all");const [date,setDate]=useState("");const [endDate,setEndDate]=useState("");const [time,setTime]=useState("");const [isRecurring,setIsRecurring]=useState(false);const [weekday,setWeekday]=useState("4"); const [paymentMethod,setPaymentMethod]=useState<"dinheiro"|"pix_cartao">("dinheiro");const [result,setResult]=useState<AdminRecurringResult|null>(null);const [singlePending,setSinglePending]=useState(false);
   const resolvedBarberId=barberId!=="all"?barberId:null;
-  const slotParams={date,serviceId,...(resolvedBarberId?{barberId:resolvedBarberId}:{})};
-  const {data:slotsData,isLoading:slotsLoading}=useGetAvailableSlots(slotParams,{query:{enabled:!isRecurring&&!!date&&!!serviceId,queryKey:getGetAvailableSlotsQueryKey(slotParams)}});
   const handleDateChange=(v:string)=>{if(v&&new Date(v).getUTCDay()===1){toast({title:"Aviso",description:"Segunda-feira fechado"});setDate("");return;}setDate(v);setTime("");};
-  const handleSingle=()=>{if(!name||!phone||!serviceId||!date||!time)return;createMutation.mutate({data:{serviceId,date,time,clientName:name,clientPhone:phone,barberId:resolvedBarberId,paymentMethod}},{onSuccess:()=>{toast({title:"Sucesso",description:"Agendamento criado."});qc.invalidateQueries({queryKey:getListAppointmentsQueryKey({})});onComplete();},onError:()=>toast({title:"Erro",description:"Horário indisponível.",variant:"destructive"})});};
+  const handleSingle=async()=>{
+    if(!name||!phone||!serviceId||!date||!time)return;
+    if(!TIME_HHMM_RE.test(time)){toast({title:"Horário inválido",description:"Use o formato HH:mm.",variant:"destructive"});return;}
+    const adminToken=localStorage.getItem("adminToken");
+    if(!adminToken){toast({title:"Sessão expirada",description:"Faça login novamente.",variant:"destructive"});return;}
+    setSinglePending(true);
+    try{
+      const response=await fetch("/api/appointments/admin",{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${adminToken}`},body:JSON.stringify({serviceId,date,time,clientName:name,clientPhone:phone,barberId:resolvedBarberId,paymentMethod})});
+      if(!response.ok){toast({title:"Erro",description:"Não foi possível criar o agendamento.",variant:"destructive"});return;}
+      toast({title:"Sucesso",description:"Agendamento criado."});
+      qc.invalidateQueries({queryKey:getListAppointmentsQueryKey({})});
+      onComplete();
+    }catch{
+      toast({title:"Erro",description:"Não foi possível criar o agendamento.",variant:"destructive"});
+    }finally{
+      setSinglePending(false);
+    }
+  };
   const handleRecurring=()=>{if(!name||!phone||!serviceId||!time||!date||!endDate)return;console.log("paymentMethod =",paymentMethod);createRecurringMutation.mutate({data:{clientName:name,clientPhone:phone,serviceId,time,weekday:parseInt(weekday,10),startDate:date,endDate,barberId:resolvedBarberId,paymentMethod:paymentMethod||"dinheiro"}},{onSuccess:(res)=>{qc.invalidateQueries({queryKey:getListAppointmentsQueryKey({})});if(res.created.length===0){toast({title:"Nenhum agendamento criado",description:"Todos os horários deste período já possuem agendamento ou conflito.",variant:"destructive"});return;}setResult({groupId:res.groupId,created:res.created.map((a)=>a.date),skipped:res.skipped.length,time});},onError:()=>toast({title:"Erro",variant:"destructive"})});};
   const resetForm=()=>{setName("");setPhone("");setServiceId("");setBarberId("all");setDate("");setEndDate("");setTime("");setIsRecurring(false);setWeekday("4");setPaymentMethod("dinheiro");setResult(null);};
-  const isPending=createMutation.isPending||createRecurringMutation.isPending;
-  const canSingle=!isRecurring&&!!name&&!!phone&&!!serviceId&&!!date&&!!time;
+  const isPending=singlePending||createRecurringMutation.isPending;
+  const canSingle=!isRecurring&&!!name&&!!phone&&!!serviceId&&!!date&&TIME_HHMM_RE.test(time);
   const canRecurring=isRecurring&&!!name&&!!phone&&!!serviceId&&!!time&&!!date&&!!endDate;
   if(result)return(<div className="max-w-md mx-auto"><div className="glass-card rounded-3xl p-8 text-center space-y-6"><div className="flex justify-center"><div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><CheckCircle2 className="w-10 h-10 text-emerald-400" /></div></div><div><p className="text-muted-foreground text-sm mb-1">Recorrência criada</p><h2 className="font-display text-2xl font-bold text-white">{result.created.length} agendamentos!</h2>{result.skipped>0&&<p className="text-muted-foreground text-xs mt-1">{result.skipped} ignorado{result.skipped!==1?"s":""} por conflito</p>}</div><div className="rounded-2xl border border-white/6 divide-y divide-white/5 max-h-52 overflow-y-auto text-left">{result.created.map((d)=><div key={d} className="flex justify-between items-center px-5 py-3"><span className="text-white text-sm font-semibold">{d.split("-").reverse().join("/")}</span><span className="text-gold text-sm">{result.time}</span></div>)}</div><div className="flex gap-3"><Button className="flex-1 bg-accent hover:bg-accent/90 text-white h-11 rounded-xl font-semibold" onClick={onComplete}>Ver Agendamentos</Button><Button variant="outline" className="flex-1 border-white/10 hover:bg-white/5 h-11 rounded-xl" onClick={resetForm}><RefreshCw className="w-4 h-4 mr-2" />Novo</Button></div></div></div>);
   return(
@@ -529,7 +717,7 @@ function NewAppointmentTab({onComplete}:{onComplete:()=>void}){
       <FormField label="Pagamento"><div className="flex gap-2">{[{value:"dinheiro",label:"Dinheiro"},{value:"pix_cartao",label:"Pix/Cartão"}].map((opt)=><button key={opt.value} type="button" onClick={()=>setPaymentMethod(opt.value as any)} className={`flex-1 h-10 rounded-xl text-sm font-semibold border transition-all ${paymentMethod===opt.value?"bg-accent/15 border-accent text-white":"bg-white/4 border-white/8 text-muted-foreground hover:bg-white/7"}`} data-testid={`admin-payment-${opt.value}`}>{opt.label}</button>)}</div></FormField>
       <FormField label="Agendamento recorrente?"><div className="flex gap-2">{[{value:false,label:"Não"},{value:true,label:"Sim — semanal fixo"}].map((opt)=><button key={String(opt.value)} type="button" onClick={()=>{setIsRecurring(opt.value);setDate("");setTime("");}} className={`flex-1 h-10 rounded-xl text-sm font-semibold border transition-all ${isRecurring===opt.value?"bg-accent/15 border-accent text-white":"bg-white/4 border-white/8 text-muted-foreground hover:bg-white/7"}`} data-testid={`admin-toggle-recurring-${opt.value}`}>{opt.label}</button>)}</div></FormField>
       <AnimatePresence mode="wait">
-        {!isRecurring?(<motion.div key="single" initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} className="overflow-hidden"><div className="grid grid-cols-2 gap-4"><FormField label="Data"><Input type="date" value={date} onChange={(e)=>handleDateChange(e.target.value)} className="bg-white/5 border-white/8 h-11 rounded-xl text-white" data-testid="input-new-date"/></FormField><FormField label="Horário"><Select value={time} onValueChange={setTime} disabled={!date||!serviceId||slotsLoading}><SelectTrigger className="bg-white/5 border-white/8 h-11 rounded-xl" data-testid="input-new-time"><SelectValue placeholder={!date||!serviceId?"Escolha data e serviço":slotsLoading?"Carregando...":"Selecione"}/></SelectTrigger><SelectContent className="bg-[#111] border-white/8 max-h-56 overflow-y-auto">{(slotsData?.slots??[]).map((slot:string)=><SelectItem key={slot} value={slot}>{slot}</SelectItem>)}{!slotsLoading&&date&&serviceId&&(slotsData?.slots??[]).length===0&&<div className="px-3 py-4 text-sm text-muted-foreground text-center">Sem horários</div>}</SelectContent></Select></FormField></div></motion.div>):
+        {!isRecurring?(<motion.div key="single" initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} className="overflow-hidden"><div className="grid grid-cols-2 gap-4"><FormField label="Data"><Input type="date" value={date} onChange={(e)=>handleDateChange(e.target.value)} className="bg-white/5 border-white/8 h-11 rounded-xl text-white" data-testid="input-new-date"/></FormField><FormField label="Horário"><Input type="time" step={60} value={time} onChange={(e)=>setTime(e.target.value)} className="bg-white/5 border-white/8 h-11 rounded-xl text-white" data-testid="input-new-time"/></FormField></div></motion.div>):
         (<motion.div key="recurring" initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} className="overflow-hidden space-y-4">
           <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-500/8 border border-blue-500/15"><CalendarDays className="w-4 h-4 text-blue-400 mt-0.5 shrink-0"/><p className="text-xs text-blue-300/90 leading-relaxed">Agendamentos para todos os dias selecionados no período. Datas com conflito são ignoradas.</p></div>
           <FormField label="Dia da semana"><div className="flex gap-2 flex-wrap">{ADMIN_WEEKDAYS.map((d)=><button key={d.value} type="button" onClick={()=>{setWeekday(d.value);setTime("");}} className={`h-9 px-3 rounded-xl text-sm font-semibold border transition-all ${weekday===d.value?"bg-accent border-accent text-white":"bg-white/5 border-white/8 text-muted-foreground hover:text-white"}`} data-testid="admin-select-weekday">{d.short}</button>)}</div></FormField>

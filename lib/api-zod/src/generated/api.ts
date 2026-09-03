@@ -231,10 +231,11 @@ export const ListAppointmentsResponseItem = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
-  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).nullish(),
+  clientEmail: zod.string().email().nullish(),
   barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
@@ -249,10 +250,11 @@ export const ListAppointmentsResponse = zod.array(ListAppointmentsResponseItem);
 export const CreateAppointmentBody = zod.object({
   clientName: zod.string(),
   clientPhone: zod.string(),
+  clientEmail: zod.string().email().optional(),
   serviceId: zod.string(),
   date: zod.string(),
   time: zod.string(),
-  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).optional(),
   barberId: zod.string().nullish(),
 });
 
@@ -281,15 +283,18 @@ export const CreateRecurringAppointmentsBody = zod.object({
   clientPhone: zod.string(),
   serviceId: zod.string(),
   time: zod.string(),
-  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
   weekday: zod
     .number()
     .describe("Day of week: 0=Sunday, 1=Monday, ... 6=Saturday"),
+  period: zod.enum(["this_month", "next_2_months"]).optional(),
   startDate: zod
-  .string()
-  .describe("Reference date to determine current month (YYYY-MM-DD)"),
-endDate: zod.string().optional(),
-barberId: zod.string().nullish(),
+    .string()
+    .describe("Reference date to determine current month (YYYY-MM-DD)"),
+  endDate: zod
+    .string()
+    .describe("Final date of the recurrence range (YYYY-MM-DD)"),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).optional(),
+  barberId: zod.string().nullish(),
 });
 
 /**
@@ -324,10 +329,11 @@ export const GetAppointmentResponse = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
-  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).nullish(),
+  clientEmail: zod.string().email().nullish(),
   barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
@@ -346,7 +352,7 @@ export const UpdateAppointmentBody = zod.object({
   status: zod.enum(["pending", "completed", "cancelled"]).optional(),
   clientName: zod.string().optional(),
   clientPhone: zod.string().optional(),
-  paymentMethod: zod.enum(["dinheiro","pix_cartao"]).optional(),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).optional(),
   serviceId: zod.string().optional(),
   date: zod.string().optional(),
   time: zod.string().optional(),
@@ -360,10 +366,11 @@ export const UpdateAppointmentResponse = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
-  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).nullish(),
+  clientEmail: zod.string().email().nullish(),
   barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),
@@ -434,10 +441,11 @@ export const GetDashboardRemindersResponseItem = zod.object({
   serviceId: zod.string(),
   serviceName: zod.string(),
   servicePrice: zod.number(),
-  paymentMethod: zod.string().nullish(),
   date: zod.string(),
   time: zod.string(),
   status: zod.enum(["pending", "completed", "cancelled"]),
+  paymentMethod: zod.enum(["dinheiro", "pix_cartao"]).nullish(),
+  clientEmail: zod.string().email().nullish(),
   barberId: zod.string().nullish(),
   isRecurring: zod.boolean(),
   recurrenceType: zod.string().nullish(),

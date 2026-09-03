@@ -3,3 +3,4 @@ export * from "./barbers";
 export * from "./services";
 export * from "./blocked-slots";
 export * from "./settings";
+export * from "./clients";

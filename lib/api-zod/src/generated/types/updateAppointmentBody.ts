@@ -5,12 +5,14 @@
  * Gedilson Rai Barbershop API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateAppointmentBodyPaymentMethod } from "./updateAppointmentBodyPaymentMethod";
 import type { UpdateAppointmentBodyStatus } from "./updateAppointmentBodyStatus";
 
 export interface UpdateAppointmentBody {
   status?: UpdateAppointmentBodyStatus;
   clientName?: string;
   clientPhone?: string;
+  paymentMethod?: UpdateAppointmentBodyPaymentMethod;
   serviceId?: string;
   date?: string;
   time?: string;

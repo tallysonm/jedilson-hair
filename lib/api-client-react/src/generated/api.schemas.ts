@@ -95,6 +95,15 @@ export const AppointmentStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type AppointmentPaymentMethod =
+  | (typeof AppointmentPaymentMethod)[keyof typeof AppointmentPaymentMethod]
+  | null;
+
+export const AppointmentPaymentMethod = {
+  dinheiro: "dinheiro",
+  pix_cartao: "pix_cartao",
+} as const;
+
 export interface Appointment {
   id: number;
   clientName: string;
@@ -105,6 +114,8 @@ export interface Appointment {
   date: string;
   time: string;
   status: AppointmentStatus;
+  paymentMethod?: AppointmentPaymentMethod;
+  clientEmail?: string | null;
   barberId?: string | null;
   isRecurring: boolean;
   recurrenceType?: string | null;
@@ -112,12 +123,22 @@ export interface Appointment {
   createdAt: string;
 }
 
+export type CreateAppointmentBodyPaymentMethod =
+  (typeof CreateAppointmentBodyPaymentMethod)[keyof typeof CreateAppointmentBodyPaymentMethod];
+
+export const CreateAppointmentBodyPaymentMethod = {
+  dinheiro: "dinheiro",
+  pix_cartao: "pix_cartao",
+} as const;
+
 export interface CreateAppointmentBody {
   clientName: string;
   clientPhone: string;
+  clientEmail?: string;
   serviceId: string;
   date: string;
   time: string;
+  paymentMethod?: CreateAppointmentBodyPaymentMethod;
   barberId?: string | null;
 }
 
@@ -130,10 +151,19 @@ export const UpdateAppointmentBodyStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type UpdateAppointmentBodyPaymentMethod =
+  (typeof UpdateAppointmentBodyPaymentMethod)[keyof typeof UpdateAppointmentBodyPaymentMethod];
+
+export const UpdateAppointmentBodyPaymentMethod = {
+  dinheiro: "dinheiro",
+  pix_cartao: "pix_cartao",
+} as const;
+
 export interface UpdateAppointmentBody {
   status?: UpdateAppointmentBodyStatus;
   clientName?: string;
   clientPhone?: string;
+  paymentMethod?: UpdateAppointmentBodyPaymentMethod;
   serviceId?: string;
   date?: string;
   time?: string;
@@ -185,6 +215,14 @@ export const CreateRecurringAppointmentBodyPeriod = {
   next_2_months: "next_2_months",
 } as const;
 
+export type CreateRecurringAppointmentBodyPaymentMethod =
+  (typeof CreateRecurringAppointmentBodyPaymentMethod)[keyof typeof CreateRecurringAppointmentBodyPaymentMethod];
+
+export const CreateRecurringAppointmentBodyPaymentMethod = {
+  dinheiro: "dinheiro",
+  pix_cartao: "pix_cartao",
+} as const;
+
 export interface CreateRecurringAppointmentBody {
   clientName: string;
   clientPhone: string;
@@ -192,12 +230,13 @@ export interface CreateRecurringAppointmentBody {
   time: string;
   /** Day of week: 0=Sunday, 1=Monday, ... 6=Saturday */
   weekday: number;
-  period: CreateRecurringAppointmentBodyPeriod;
-/** Reference date to determine current month (YYYY-MM-DD) */
-startDate: string;
-/** Final date for custom recurrence range (YYYY-MM-DD) */
-endDate?: string;
-barberId?: string | null;
+  period?: CreateRecurringAppointmentBodyPeriod;
+  /** Reference date to determine current month (YYYY-MM-DD) */
+  startDate: string;
+  /** Final date of the recurrence range (YYYY-MM-DD) */
+  endDate: string;
+  paymentMethod?: CreateRecurringAppointmentBodyPaymentMethod;
+  barberId?: string | null;
 }
 
 export interface RecurringAppointmentResult {

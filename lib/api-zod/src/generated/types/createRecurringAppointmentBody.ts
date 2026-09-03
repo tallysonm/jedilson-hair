@@ -5,6 +5,7 @@
  * Gedilson Rai Barbershop API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateRecurringAppointmentBodyPaymentMethod } from "./createRecurringAppointmentBodyPaymentMethod";
 import type { CreateRecurringAppointmentBodyPeriod } from "./createRecurringAppointmentBodyPeriod";
 
 export interface CreateRecurringAppointmentBody {
@@ -14,8 +15,11 @@ export interface CreateRecurringAppointmentBody {
   time: string;
   /** Day of week: 0=Sunday, 1=Monday, ... 6=Saturday */
   weekday: number;
-  period: CreateRecurringAppointmentBodyPeriod;
+  period?: CreateRecurringAppointmentBodyPeriod;
   /** Reference date to determine current month (YYYY-MM-DD) */
   startDate: string;
+  /** Final date of the recurrence range (YYYY-MM-DD) */
+  endDate: string;
+  paymentMethod?: CreateRecurringAppointmentBodyPaymentMethod;
   barberId?: string | null;
 }

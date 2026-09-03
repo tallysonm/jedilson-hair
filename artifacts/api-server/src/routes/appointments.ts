@@ -163,7 +163,7 @@ const blockedIntervals = Array.from(blockedTimeSet).map((blockedTime) => {
   if (barberId) baseConditions.push(eq(appointmentsTable.barberId, barberId));
 
   const booked = await db
-    .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId })
+    .select({ time: appointmentsTable.time, serviceId: appointmentsTable.serviceId, isManual: appointmentsTable.isManual })
     .from(appointmentsTable)
     .where(
   and(
@@ -172,7 +172,11 @@ const blockedIntervals = Array.from(blockedTimeSet).map((blockedTime) => {
   )
 );
 
-  const bookedWindows = await Promise.all(booked.map(async b => {
+  // Agendamento manual do Admin fora da grade normal não consome slot do cliente.
+  const normalSlotSet = new Set(allSlots);
+  const bookedAffectingClient = booked.filter((b) => !b.isManual || normalSlotSet.has(b.time));
+
+  const bookedWindows = await Promise.all(bookedAffectingClient.map(async b => {
     const existingService = await getServiceFromDb(b.serviceId);
     const existingDuration = existingService ? existingService.durationMinutes : 30;
     const existingOccupiedDuration = getOccupiedMinutes(existingDuration);
@@ -199,23 +203,180 @@ const blockedIntervals = Array.from(blockedTimeSet).map((blockedTime) => {
   res.json({ date, slots: available });
 });
 
-router.get("/export", requireAdmin, async (req, res) => {
-  const period = typeof req.query["period"] === "string" ? req.query["period"] : "all";
+router.get("/month-availability", async (req, res) => {
+  const month = typeof req.query["month"] === "string" ? req.query["month"] : undefined;
+  const serviceId = typeof req.query["serviceId"] === "string" ? req.query["serviceId"] : undefined;
   const barberId = typeof req.query["barberId"] === "string" ? req.query["barberId"] : undefined;
 
-  const conditions = [];
-  if (period !== "all") {
-    const range = getDateRange(period);
-    if (range) {
-      conditions.push(gte(appointmentsTable.date, range.start));
-      conditions.push(lte(appointmentsTable.date, range.end));
-    }
+  if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
+    return;
   }
+  if (!serviceId) {
+    res.status(400).json({ error: "serviceId is required" });
+    return;
+  }
+
+  const service = await getServiceFromDb(serviceId);
+  const duration = service ? service.durationMinutes : 30;
+  const occupiedDuration = getOccupiedMinutes(duration);
+
+  const [yearStr, monthStr] = month.split("-");
+  const year = Number(yearStr);
+  const monthIndex = Number(monthStr) - 1;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(daysInMonth).padStart(2, "0")}`;
+
+  const maxAllowedDate = getMaxAllowedDate();
+  const now = new Date();
+  // Local date (not UTC) to match the rest of the scheduling rules
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  // Whole-day blocks for the month (same source used by /available-slots, one query instead of one per day)
+  const allDayBlocks = await db
+    .select({ date: blockedSlotsTable.date })
+    .from(blockedSlotsTable)
+    .where(and(
+      gte(blockedSlotsTable.date, monthStart),
+      lte(blockedSlotsTable.date, monthEnd),
+      eq(blockedSlotsTable.allDay, true),
+    ));
+  const allDayBlockedSet = new Set(allDayBlocks.map((b) => b.date));
+
+  // Specific blocked time slots for the month, grouped by date
+  const timeBlocks = await db
+    .select({ date: blockedSlotsTable.date, time: blockedSlotsTable.time })
+    .from(blockedSlotsTable)
+    .where(and(
+      gte(blockedSlotsTable.date, monthStart),
+      lte(blockedSlotsTable.date, monthEnd),
+      eq(blockedSlotsTable.allDay, false),
+    ));
+  const blockedTimesByDate = new Map<string, Set<string>>();
+  for (const b of timeBlocks) {
+    if (!b.time) continue;
+    if (!blockedTimesByDate.has(b.date)) blockedTimesByDate.set(b.date, new Set());
+    blockedTimesByDate.get(b.date)!.add(b.time);
+  }
+
+  // Existing (non-cancelled) appointments for the month, same barberId semantics as /available-slots
+  const appointmentConditions = [
+    gte(appointmentsTable.date, monthStart),
+    lte(appointmentsTable.date, monthEnd),
+    ne(appointmentsTable.status, "cancelled"),
+  ];
+  if (barberId) appointmentConditions.push(eq(appointmentsTable.barberId, barberId));
+
+  const bookedRows = await db
+    .select({ date: appointmentsTable.date, time: appointmentsTable.time, serviceId: appointmentsTable.serviceId, isManual: appointmentsTable.isManual })
+    .from(appointmentsTable)
+    .where(and(...appointmentConditions));
+
+  // All service durations fetched once to resolve occupied windows of existing bookings
+  const allServices = await db.select({ id: servicesTable.id, durationMinutes: servicesTable.durationMinutes }).from(servicesTable);
+  const serviceDurationMap = new Map(allServices.map((s) => [s.id, s.durationMinutes]));
+
+  const bookedByDate = new Map<string, { time: string; serviceId: string; isManual: boolean }[]>();
+  for (const b of bookedRows) {
+    if (!bookedByDate.has(b.date)) bookedByDate.set(b.date, []);
+    bookedByDate.get(b.date)!.push({ time: b.time, serviceId: b.serviceId, isManual: b.isManual });
+  }
+
+  const days: { date: string; available: boolean }[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${month}-${String(day).padStart(2, "0")}`;
+
+    // Past dates and dates beyond the client's allowed booking window are always unavailable
+    if (date < todayStr || date > maxAllowedDate) {
+      days.push({ date, available: false });
+      continue;
+    }
+
+    const hours = getOpeningHours(date);
+    if (!hours) {
+      days.push({ date, available: false });
+      continue;
+    }
+
+    if (allDayBlockedSet.has(date)) {
+      days.push({ date, available: false });
+      continue;
+    }
+
+    const allSlots = generateTimeSlots(hours.open, hours.close, duration);
+    const normalSlotSet = new Set(allSlots);
+
+    const blockedTimeSet = new Set(blockedTimesByDate.get(date) ?? []);
+    const weekday = new Date(`${date}T12:00:00`).getDay();
+
+    // Terça a Domingo - bloqueia 08:00
+    if (weekday >= 2 || weekday === 0) {
+      blockedTimeSet.add("08:00");
+    }
+
+    // Terça a Sexta - bloqueia almoço
+    if (weekday >= 2 && weekday <= 5) {
+      blockedTimeSet.add("11:30");
+      blockedTimeSet.add("12:00");
+      blockedTimeSet.add("12:30");
+      blockedTimeSet.add("13:00");
+      blockedTimeSet.add("13:30");
+    }
+
+    // Sábado - bloqueia 13:00 e 13:30
+    if (weekday === 6) {
+      blockedTimeSet.add("13:00");
+      blockedTimeSet.add("13:30");
+    }
+
+    const blockedIntervals = Array.from(blockedTimeSet).map((blockedTime) => {
+      const start = timeToMinutes(String(blockedTime));
+      return { start, end: start + 30 };
+    });
+
+    const bookedWindows = (bookedByDate.get(date) ?? [])
+      // Agendamento manual do Admin fora da grade normal não consome slot do cliente.
+      .filter((b) => !b.isManual || normalSlotSet.has(b.time))
+      .map((b) => {
+        const existingOccupiedDuration = getOccupiedMinutes(serviceDurationMap.get(b.serviceId) ?? 30);
+        const start = timeToMinutes(b.time);
+        return { start, end: start + existingOccupiedDuration + BUFFER_MINUTES };
+      });
+
+    const hasAvailableSlot = allSlots.some((slot) => {
+      const slotStart = timeToMinutes(slot);
+      const slotEnd = slotStart + occupiedDuration + BUFFER_MINUTES;
+
+      const overlapsBlockedInterval = blockedIntervals.some(
+        (blocked) => slotStart < blocked.end && slotEnd > blocked.start,
+      );
+      if (overlapsBlockedInterval) return false;
+
+      return !bookedWindows.some(
+        (booked) => slotStart < booked.end && slotEnd > booked.start,
+      );
+    });
+
+    days.push({ date, available: hasAvailableSlot });
+  }
+
+  res.json({ month, days });
+});
+
+router.get("/export", requireAdmin, async (req, res) => {
+  const view = req.query["view"] === "history" ? "history" : "active";
+  const period = typeof req.query["period"] === "string" ? req.query["period"] : "all";
+  const barberId = typeof req.query["barberId"] === "string" ? req.query["barberId"] : undefined;
+  const search = typeof req.query["search"] === "string" ? req.query["search"].trim() : "";
+
+  const conditions = [];
   if (barberId) conditions.push(eq(appointmentsTable.barberId, barberId));
 
   const rows = conditions.length > 0
-    ? await db.select().from(appointmentsTable).where(and(...conditions)).orderBy(appointmentsTable.date, appointmentsTable.time)
-    : await db.select().from(appointmentsTable).orderBy(appointmentsTable.date, appointmentsTable.time);
+    ? await db.select().from(appointmentsTable).where(and(...conditions))
+    : await db.select().from(appointmentsTable);
 
   // Build barber name lookup
   const allBarbers = await db.select({ id: barbersTable.id, name: barbersTable.name }).from(barbersTable);
@@ -223,27 +384,110 @@ router.get("/export", requireAdmin, async (req, res) => {
 
   const statusLabel = (s: string) => s === "completed" ? "Concluído" : s === "cancelled" ? "Cancelado" : "Pendente";
 
-  const header = "ID,Cliente,Telefone,Serviço,Preço,Data,Horário,Barbeiro,Pagamento,Status,Recorrente\n";
-  const lines = rows.map(r =>
-    [
-      r.id,
-      `"${r.clientName}"`,
-      `"${r.clientPhone}"`,
-      `"${r.serviceName}"`,
-      Number(r.servicePrice).toFixed(2),
-      r.date,
-      r.time,
-      `"${r.barberId ? (barberMap.get(r.barberId) ?? r.barberId) : ""}"`,
-      `"${r.paymentMethod ?? ""}"`,
-      statusLabel(r.status),
-      r.isRecurring ? "Sim" : "Não",
-    ].join(",")
-  ).join("\n");
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const formatLocalDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const getAppointmentDateTime = (date: string, time: string) => new Date(`${date}T${time}:00`);
+
+  const getPeriodBounds = () => {
+    if (period === "all") return null;
+
+    const start = new Date(now);
+    const end = new Date(now);
+
+    if (period === "day") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    if (period === "week") {
+      start.setHours(0, 0, 0, 0);
+      start.setDate(now.getDate() - now.getDay());
+
+      end.setTime(start.getTime());
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+
+    end.setFullYear(now.getFullYear(), now.getMonth() + 1, 0);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  };
+
+  const periodBounds = getPeriodBounds();
+  const normalizedSearch = search.toLowerCase();
+
+  const matchesPeriod = (dateTime: Date) => {
+    if (!periodBounds) return true;
+    return dateTime >= periodBounds.start && dateTime <= periodBounds.end;
+  };
+
+  const matchesSearch = (clientName: string) => {
+    if (!normalizedSearch) return true;
+    return clientName.trim().toLowerCase().includes(normalizedSearch);
+  };
+
+  const filteredRows = rows.filter((row) => {
+    const dateTime = getAppointmentDateTime(row.date, row.time);
+    const isHistory = row.status === "completed" || row.status === "cancelled" || dateTime < now;
+    const isActive = row.status === "pending" && dateTime >= now;
+
+    if (view === "active" && !isActive) return false;
+    if (view === "history" && !isHistory) return false;
+
+    if (!matchesPeriod(dateTime)) return false;
+    if (!matchesSearch(row.clientName)) return false;
+
+    return true;
+  });
+
+  const sortedRows = filteredRows.sort((a, b) => {
+    const aDate = getAppointmentDateTime(a.date, a.time).getTime();
+    const bDate = getAppointmentDateTime(b.date, b.time).getTime();
+    return view === "active" ? aDate - bDate : bDate - aDate;
+  });
+
+  const serializeCsvField = (value: unknown) => {
+    const safe = value == null ? "" : String(value);
+    return `"${safe.replace(/"/g, '""')}"`;
+  };
+
+  const currencyBRL = (value: unknown) => new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value ?? 0));
+
+  const header = "Cliente;Telefone;Serviço;Data;Horário;Barbeiro;Pagamento;Status;Valor;Recorrente\n";
+  const lines = sortedRows.map((r) => {
+    const barberName = r.barberId ? (barberMap.get(r.barberId) ?? r.barberId) : "";
+    return [
+      serializeCsvField(r.clientName),
+      serializeCsvField(r.clientPhone),
+      serializeCsvField(r.serviceName),
+      serializeCsvField(r.date),
+      serializeCsvField(r.time),
+      serializeCsvField(barberName),
+      serializeCsvField(r.paymentMethod ?? ""),
+      serializeCsvField(statusLabel(r.status)),
+      serializeCsvField(currencyBRL(r.servicePrice)),
+      serializeCsvField(r.isRecurring ? "Sim" : "Não"),
+    ].join(";");
+  }).join("\n");
 
   const csv = header + lines;
 
+  const fileDate = formatLocalDate(now);
+  const filename = view === "history"
+    ? `historico-agendamentos-${fileDate}.csv`
+    : `agendamentos-${fileDate}.csv`;
+
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="agendamentos-${new Date().toISOString().split("T")[0]}.csv"`);
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send("\uFEFF" + csv); // BOM for Excel compatibility
 });
 
@@ -284,11 +528,14 @@ function getMaxAllowedDate(): string {
 
 router.post("/", async (req, res) => {
   const parsed = CreateAppointmentBody.safeParse(req.body);
+  if (parsed.success) {
+    console.log("BODY RECEBIDO:", parsed.data);
+  }
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { clientName, clientPhone, serviceId, date, time, paymentMethod } = parsed.data;
+  const { clientName, clientPhone, clientEmail, serviceId, date, time, paymentMethod } = parsed.data;
 
   if (date > getMaxAllowedDate()) {
     res.status(400).json({ error: "Data indisponível para agendamento" });
@@ -356,6 +603,7 @@ router.post("/", async (req, res) => {
   const [created] = await db.insert(appointmentsTable).values({
     clientName,
     clientPhone,
+    clientEmail: clientEmail ?? null,
     serviceId,
     serviceName: service.name,
     servicePrice: service.price,
@@ -363,6 +611,48 @@ router.post("/", async (req, res) => {
     date,
     time,
     barberId,
+    status: "pending",
+  }).returning();
+
+  res.status(201).json(formatAppointment(created));
+});
+
+// Criação manual pelo Admin: horário livre (HH:mm) e sobreposição permitida.
+router.post("/admin", requireAdmin, async (req, res) => {
+  const parsed = CreateAppointmentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { clientName, clientPhone, clientEmail, serviceId, date, time, paymentMethod } = parsed.data;
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    res.status(400).json({ error: "Horário inválido. Use o formato HH:mm" });
+    return;
+  }
+
+  const service = await getServiceFromDb(serviceId);
+  if (!service) {
+    res.status(400).json({ error: "Serviço inválido" });
+    return;
+  }
+
+  const barberId = typeof (req.body as Record<string, unknown>)["barberId"] === "string"
+    ? (req.body as Record<string, unknown>)["barberId"] as string
+    : null;
+
+  const [created] = await db.insert(appointmentsTable).values({
+    clientName,
+    clientPhone,
+    clientEmail: clientEmail ?? null,
+    serviceId,
+    serviceName: service.name,
+    servicePrice: service.price,
+    paymentMethod,
+    date,
+    time,
+    barberId,
+    isManual: true,
     status: "pending",
   }).returning();
 
@@ -426,7 +716,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
 
 router.delete("/group/:groupId", requireAdmin, async (req, res) => {
   const groupId = req.params["groupId"];
-  if (!groupId) {
+  if (typeof groupId !== "string" || !groupId) {
     res.status(400).json({ error: "Invalid group ID" });
     return;
   }

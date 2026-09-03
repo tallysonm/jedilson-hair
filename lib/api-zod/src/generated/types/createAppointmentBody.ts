@@ -5,12 +5,15 @@
  * Gedilson Rai Barbershop API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateAppointmentBodyPaymentMethod } from "./createAppointmentBodyPaymentMethod";
 
 export interface CreateAppointmentBody {
   clientName: string;
   clientPhone: string;
+  clientEmail?: string;
   serviceId: string;
   date: string;
   time: string;
+  paymentMethod?: CreateAppointmentBodyPaymentMethod;
   barberId?: string | null;
 }

@@ -4,6 +4,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import BookingPage from "@/pages/BookingPage";
+import LoginPage from "@/pages/LoginPage";
+import RegisterPage from "@/pages/RegisterPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import CustomerDashboardPage from "@/pages/CustomerDashboardPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import BarberPage from "@/pages/BarberPage";
@@ -14,6 +19,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={BookingPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/cadastro" component={RegisterPage} />
+      <Route path="/esqueci-senha" component={ForgotPasswordPage} />
+      <Route path="/redefinir-senha" component={ResetPasswordPage} />
+      <Route path="/minha-conta" component={CustomerDashboardPage} />
       <Route path="/admin" component={AdminLoginPage} />
       <Route path="/admin/dashboard" component={AdminDashboardPage} />
       <Route path="/barbeiro/:id" component={BarberPage} />
