@@ -4,7 +4,7 @@ import {
   MessageCircle, CheckCircle2, RefreshCw,
   CalendarDays, ArrowLeft, Clock, Check, Repeat2,
   ChevronRight, User, Phone, Star, MapPin, Scissors,
-  Loader2, AlertCircle,
+  Loader2, AlertCircle, UserCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,7 +214,7 @@ const handleSingle = () => {
     return (
       <div className="min-h-screen bg-[#080808] flex flex-col">
         <PageHeader onAdminClick={() => setLocation("/admin")} onMyAccountClick={handleMyAccountClick} />
-        <main className="flex-1 flex items-center justify-center p-5 py-16">
+        <main className="flex-1 flex flex-col items-center justify-center p-5 py-16">
           <AnimatePresence mode="wait">
             {successData.type === "single" ? (
               <motion.div key="ss" {...FADE_UP} className="w-full max-w-sm space-y-4">
@@ -315,6 +315,26 @@ const handleSingle = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Additional block: does not replace the confirmation above, only adds a CTA below it */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+            className="w-full max-w-sm mt-4 rounded-3xl border border-white/8 bg-white/[0.025] p-5 text-center space-y-3"
+          >
+            <h3 className="font-display font-bold text-white text-base">
+              Acompanhe seus agendamentos pela Área do Cliente
+            </h3>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Entre na sua conta para visualizar seus horários, acompanhar seus agendamentos e realizar cancelamentos quando permitido. Ainda não tem uma conta? Você pode criar a sua.
+            </p>
+            <Button
+              onClick={() => setLocation("/minha-conta")}
+              variant="outline"
+              className="w-full border-white/10 text-white hover:bg-white/5 h-11 rounded-2xl font-semibold"
+            >
+              <UserCircle2 className="w-4 h-4 mr-2" /> Acessar Área do Cliente
+            </Button>
+          </motion.div>
         </main>
         <WhatsAppFAB />
         <InfoFooter />

@@ -1,9 +1,36 @@
 import { Router, type IRouter, type Response } from "express";
-import { db, appointmentsTable, barbersTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { db, appointmentsTable, barbersTable, clientsTable } from "@workspace/db";
+import { and, eq, or, sql } from "drizzle-orm";
 import { requireCustomer, type CustomerAuthLocals } from "../middlewares/require-customer";
 
 const router: IRouter = Router();
+
+// Somente dígitos; remove o "55" (código do país) quando o número já inclui DDD + 9 dígitos.
+function normalizePhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    return digits.slice(2);
+  }
+  return digits.length >= 10 ? digits : null;
+}
+
+// Telefone da conta autenticada, obtido exclusivamente de clients.phone via clients.auth_user_id = auth.uid().
+// Nunca aceitar telefone vindo de body/query/params.
+async function getAccountNormalizedPhone(authUserId: string): Promise<string | null> {
+  const [client] = await db
+    .select({ phone: clientsTable.phone })
+    .from(clientsTable)
+    .where(eq(clientsTable.authUserId, authUserId))
+    .limit(1);
+
+  if (!client?.phone) return null;
+  return normalizePhone(client.phone);
+}
+
+// Compara clientPhone (formato livre) normalizado com o telefone (já normalizado, sem "55") da conta.
+function matchesAccountPhone(normalizedAccountPhone: string) {
+  return sql`regexp_replace(${appointmentsTable.clientPhone}, '\D', '', 'g') IN (${normalizedAccountPhone}, ${"55" + normalizedAccountPhone})`;
+}
 
 router.get("/me", requireCustomer, (_req, res: Response<unknown, CustomerAuthLocals>) => {
   const { id, email } = res.locals.customerUser;
@@ -12,11 +39,16 @@ router.get("/me", requireCustomer, (_req, res: Response<unknown, CustomerAuthLoc
 
 router.get("/appointments", requireCustomer, async (_req, res: Response<unknown, CustomerAuthLocals>) => {
   const customerEmail = res.locals.customerUser.email;
+  const normalizedAccountPhone = await getAccountNormalizedPhone(res.locals.customerUser.id);
 
-  if (!customerEmail) {
+  if (!customerEmail && !normalizedAccountPhone) {
     res.status(400).json({ error: "Authenticated user has no email." });
     return;
   }
+
+  const ownershipConditions = [];
+  if (customerEmail) ownershipConditions.push(eq(appointmentsTable.clientEmail, customerEmail));
+  if (normalizedAccountPhone) ownershipConditions.push(matchesAccountPhone(normalizedAccountPhone));
 
   const rows = await db
     .select({
@@ -31,7 +63,7 @@ router.get("/appointments", requireCustomer, async (_req, res: Response<unknown,
       isRecurring: appointmentsTable.isRecurring,
     })
     .from(appointmentsTable)
-    .where(eq(appointmentsTable.clientEmail, customerEmail))
+    .where(or(...ownershipConditions))
     .orderBy(appointmentsTable.date, appointmentsTable.time);
 
   const allBarbers = await db
@@ -54,8 +86,9 @@ router.patch(
   requireCustomer,
   async (req, res: Response<unknown, CustomerAuthLocals>) => {
     const customerEmail = res.locals.customerUser.email;
+    const normalizedAccountPhone = await getAccountNormalizedPhone(res.locals.customerUser.id);
 
-    if (!customerEmail) {
+    if (!customerEmail && !normalizedAccountPhone) {
       res.status(400).json({ error: "Authenticated user has no email." });
       return;
     }
@@ -65,6 +98,10 @@ router.patch(
       res.status(400).json({ error: "Invalid appointment ID." });
       return;
     }
+
+    const ownershipConditions = [];
+    if (customerEmail) ownershipConditions.push(eq(appointmentsTable.clientEmail, customerEmail));
+    if (normalizedAccountPhone) ownershipConditions.push(matchesAccountPhone(normalizedAccountPhone));
 
     const [appointment] = await db
       .select({
@@ -78,7 +115,7 @@ router.patch(
       .where(
         and(
           eq(appointmentsTable.id, parsedId),
-          eq(appointmentsTable.clientEmail, customerEmail),
+          or(...ownershipConditions),
         ),
       )
       .limit(1);
@@ -122,7 +159,7 @@ router.patch(
       .where(
         and(
           eq(appointmentsTable.id, parsedId),
-          eq(appointmentsTable.clientEmail, customerEmail),
+          or(...ownershipConditions),
         ),
       )
       .returning({

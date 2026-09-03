@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 import { JedilsonLogo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,8 @@ export default function ResetPasswordPage() {
   const [, setLocation] = useLocation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [hasRecoveryAccess, setHasRecoveryAccess] = useState<boolean | null>(null);
@@ -135,32 +138,52 @@ export default function ResetPasswordPage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-white/90">Nova senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Digite sua nova senha"
-                  autoComplete="new-password"
-                  className="bg-white/5 border-white/8 h-12 rounded-xl text-white placeholder:text-muted-foreground focus-visible:ring-accent/30 focus-visible:border-accent/40"
-                  data-testid="input-new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Digite sua nova senha"
+                    autoComplete="new-password"
+                    className="bg-white/5 border-white/8 h-12 rounded-xl pr-11 text-white placeholder:text-muted-foreground focus-visible:ring-accent/30 focus-visible:border-accent/40"
+                    data-testid="input-new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirm-password" className="text-white/90">Confirmar nova senha</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="Confirme sua nova senha"
-                  autoComplete="new-password"
-                  className="bg-white/5 border-white/8 h-12 rounded-xl text-white placeholder:text-muted-foreground focus-visible:ring-accent/30 focus-visible:border-accent/40"
-                  data-testid="input-confirm-new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirme sua nova senha"
+                    autoComplete="new-password"
+                    className="bg-white/5 border-white/8 h-12 rounded-xl pr-11 text-white placeholder:text-muted-foreground focus-visible:ring-accent/30 focus-visible:border-accent/40"
+                    data-testid="input-confirm-new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {errorMessage ? (
