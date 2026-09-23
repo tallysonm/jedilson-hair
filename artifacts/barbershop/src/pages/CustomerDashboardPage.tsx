@@ -403,6 +403,17 @@ export default function CustomerDashboardPage() {
                       <p className="text-xs sm:text-sm text-white/90 mt-2">
                         {formatDate(appointment.date)} | {appointment.time} | {formatCurrency(appointment.servicePrice)}
                       </p>
+                      <div className="pt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full sm:w-auto h-9 px-4 rounded-xl border-red-500/30 text-red-300 hover:bg-red-500/10"
+                          onClick={() => openCancelDialog(appointment.id)}
+                          disabled={isCancelling}
+                        >
+                          Cancelar agendamento
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
