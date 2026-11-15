@@ -21,6 +21,8 @@ function getOpeningHours(dateStr: string): { open: number; close: number } | nul
   const day = d.getDay();
 if (day === 1) return null;
 
+if (day === 0 && dateStr >= "2027-01-03") return null;
+
 // Domingo: 06:30 às 12:30
 if (day === 0) return { open: 6.5, close: 12.5 };
 

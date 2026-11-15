@@ -70,6 +70,9 @@ function getOpeningHours(dateStr: string): { open: number; close: number } | nul
   // Segunda-feira fechado
   if (day === 1) return null;
 
+  // Sunday bookings stop from 2027 onward; earlier Sundays retain existing hours.
+  if (day === 0 && dateStr >= "2027-01-03") return null;
+
   // Domingo: 06:30 às 12:30
   if (day === 0) return { open: 6.5, close: 12.5 };
 
@@ -539,6 +542,11 @@ router.post("/", async (req, res) => {
 
   if (date > getMaxAllowedDate()) {
     res.status(400).json({ error: "Data indisponível para agendamento" });
+    return;
+  }
+
+  if (date >= "2027-01-03" && new Date(date + "T12:00:00").getDay() === 0) {
+    res.status(400).json({ error: "Agendamentos não estão disponíveis aos domingos" });
     return;
   }
 

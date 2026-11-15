@@ -146,6 +146,7 @@ export default function BookingPage() {
   const isCalendarDayDisabled = (d: Date) => {
     const iso = toLocalISODate(d);
     if (iso < todayISO || iso > maxDateISO) return true;
+    if (iso >= "2027-01-03" && d.getDay() === 0) return true;
     if (isCalendarBusy || isCalendarError) return true;
     return !monthAvailabilityMap.get(iso);
   };
@@ -170,6 +171,9 @@ const selectedService = safeServices.find((s) => s.id === serviceId);
     }
     if (new Date(v + "T12:00:00").getDay() === 1) {
       toast({ title: "Segunda-feira fechado", description: "Escolha outro dia." }); return;
+    }
+    if (v >= "2027-01-03" && new Date(v + "T12:00:00").getDay() === 0) {
+      toast({ title: "Domingo fechado", description: "Escolha outro dia." }); return;
     }
     setDate(v); setTime("");
   };
